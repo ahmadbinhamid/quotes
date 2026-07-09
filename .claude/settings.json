@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker buildx *)",
+      "Bash(docker run *)",
+      "Bash(python3 -c ' *)",
+      "Bash(docker run --rm -v __CMDSUB_OUTPUT__:/app -v /Users/ahmadbinhamid/dev/flowpos/web/flowpos-ui/packages:/flowpos-ui/packages -w /tmp/testapp node:22-alpine sh -c ' *)",
+      "Bash(rm -rf node_modules/.tmp/*.tsbuildinfo && npx tsc -b 2>&1 | head -40)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8082/)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(npx --yes playwright install chromium --with-deps)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node verify.js)",
+      "Bash(node verify-scroll.js)",
+      "Bash(pkill -f \"vite --port 5199\")",
+      "Bash(curl -sS -o /dev/null -w \"backend :8082/install \\(no body\\): %{http_code}\\\\n\" -X POST http://localhost:8082/install)",
+      "Bash(curl -sS -o /dev/null -w \"localhost:3000 -> %{http_code}\\\\n\" http://localhost:3000/ --max-time 3)",
+      "Bash(curl -sS http://localhost:4040/api/tunnels)",
+      "Bash(lsof -iTCP:3000 -sTCP:LISTEN -P)",
+      "Bash(curl -sS http://localhost:3000/)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" -X POST http://localhost:3000/install -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" -X POST https://preamble-childcare-consonant.ngrok-free.dev/install -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" https://preamble-childcare-consonant.ngrok-free.dev/)",
+      "Bash(curl -sS -i https://preamble-childcare-consonant.ngrok-free.dev/)",
+      "Bash(nohup ngrok http --domain=preamble-childcare-consonant.ngrok-free.dev 3000)",
+      "Bash(curl -sS -i -X POST https://preamble-childcare-consonant.ngrok-free.dev/install -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(lsof -iTCP:8080 -sTCP:LISTEN -P)",
+      "Bash(curl -sS -o /dev/null -w \"3001 root: %{http_code}\\\\n\" http://localhost:3001/ --max-time 3)",
+      "Bash(curl -sS -o /dev/null -w \"3001 /install: %{http_code}\\\\n\" -X POST http://localhost:3001/install -H \"Content-Type: application/json\" -d '{}' --max-time 3)",
+      "Bash(curl -sS -o /dev/null -w \"3001 /api/v1: %{http_code}\\\\n\" http://localhost:3001/api/v1/me --max-time 3)",
+      "Bash(curl -sS -o /dev/null -w \"8082 /install: %{http_code}\\\\n\" -X POST http://localhost:8082/install -H \"Content-Type: application/json\" -d '{}' --max-time 3)",
+      "Bash(curl -sS -o /dev/null -w \"ngrok /install: %{http_code}\\\\n\" -X POST https://preamble-childcare-consonant.ngrok-free.dev/install -H \"Content-Type: application/json\" -d '{}' --max-time 5)"
+    ],
+    "additionalDirectories": [
+      "/Users/ahmadbinhamid/dev/flowpos/web/quotes/frontend/node_modules/.tmp"
+    ]
+  }
+}

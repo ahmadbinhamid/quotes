@@ -1,0 +1,80 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: quotes
+      MYSQL_USER: quotes
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+    ports:
+      # Host port for optional external DB access (the app + phpMyAdmin use the
+      # internal Docker network). Default 3308 avoids clashing with the
+      # ai-builder mysql stack (which defaults to 3307) and the main
+      # flowpos-backend mysql (3306) when run alongside this one.
+      - "${MYSQL_HOST_PORT:-3308}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: mysql://quotes:${MYSQL_PASSWORD:-secret}@tcp(mysql:3306)/quotes
+      # FlowPOS API this app calls on the tenant's behalf.
+      FLOWPOS_API_URL: ${FLOWPOS_API_URL:-https://api.flowpos.dev/v1}
+      # JWT auth: the main FlowPOS system signs the per-app session token with
+      # this shared secret; this service validates it (claims: tenant_id,
+      # user_id, user_email). Must equal FLOWPOS_SIGNING_SECRET below.
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+      # Dev token minting endpoint (POST /api/v1/dev/token). Off by default —
+      # never enable in prod.
+      JWT_DEV_TOKENS: ${JWT_DEV_TOKENS:-false}
+      # Signing secret FlowPOS uses to sign /install, /uninstall and /webhooks
+      # calls to this app (set on this app's FlowPOS marketplace listing).
+      FLOWPOS_SIGNING_SECRET: ${FLOWPOS_SIGNING_SECRET:-dev-insecure-signing-secret-change-me}
+    ports:
+      # Host port 8082 (not 8080) so this stack can run alongside the
+      # ai-builder backend (which maps 8080:8080) without a port clash.
+      - "${BACKEND_HOST_PORT:-8082}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      # frontend/package.json pulls in the shared UI kit via local file:
+      # deps (file:../../flowpos-ui/packages/...). That workspace lives
+      # outside this build context, so hand the builder the whole thing
+      # under a named context the Dockerfile can COPY --from=. We need
+      # flowpos-ui/node_modules too, not just packages/ — the packages'
+      # own dependencies (e.g. class-variance-authority) only resolve
+      # there, the same way they do for local (non-Docker) dev.
+      additional_contexts:
+        - flowpos-ui=../flowpos-ui
+    ports:
+      # Host port 3001 (not 3000) — ai-builder's frontend maps 3000:80.
+      - "${FRONTEND_HOST_PORT:-3001}:80"
+    depends_on:
+      - backend
+
+  # Web UI for browsing the MySQL database at http://localhost:8083
+  # (server: mysql, user: root, password: ${MYSQL_ROOT_PASSWORD:-root}).
+  phpmyadmin:
+    image: phpmyadmin:5
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${PHPMYADMIN_HOST_PORT:-8083}:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

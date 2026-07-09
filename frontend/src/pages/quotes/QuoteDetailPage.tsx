@@ -1,0 +1,268 @@
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Separator } from "@flowposltd/ui";
+import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteQuote, getQuote, sendQuote, convertQuoteToOrder } from "@/lib/api/quotes";
+import {
+  QUOTE_STATUS_LABEL,
+  QUOTE_STATUS_BADGE_VARIANT,
+  formatMoney,
+  formatDate,
+  formatDateTime,
+} from "@/utils/quote-helpers";
+
+function shareUrl(token: string): string {
+  return `${window.location.origin}/q/${token}`;
+}
+
+export default function QuoteDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const quoteId = Number(id);
+
+  const { data: quote, isLoading } = useQuery({
+    queryKey: ["quotes", id],
+    queryFn: () => getQuote(quoteId),
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: () => sendQuote(quoteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast.success("Quote sent — share the link with your customer.");
+    },
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: () => convertQuoteToOrder(quoteId),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast.success(updated.order_number ? `Order ${updated.order_number} created` : "Order created");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteQuote(quoteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast.success("Quote deleted");
+      navigate("/");
+    },
+  });
+
+  const [copied, setCopied] = useState(false);
+
+  async function copyShareLink() {
+    if (!quote) return;
+    await navigator.clipboard.writeText(shareUrl(quote.share_token));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  function handleDelete() {
+    if (!window.confirm("Delete this draft quote? This can't be undone.")) return;
+    deleteMutation.mutate();
+  }
+
+  if (isLoading || !quote) {
+    return <div className="p-6 text-sm text-content-secondary">Loading…</div>;
+  }
+
+  const canEdit = quote.status === "draft";
+  const canSend = quote.status === "draft";
+  const canShare = quote.status !== "draft";
+  const canConvert = quote.status === "accepted";
+
+  return (
+    <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/">
+              <ArrowLeft className="size-4" />
+            </Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1>{quote.quote_number}</h1>
+              <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]}>{QUOTE_STATUS_LABEL[quote.status]}</Badge>
+            </div>
+            <p className="caption mt-0.5">Created {formatDateTime(quote.created_at)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button variant="secondary" asChild>
+              <Link to={`/quotes/${quote.id}/edit`}>
+                <Pencil className="size-4" />
+                Edit
+              </Link>
+            </Button>
+          )}
+          {canEdit && (
+            <Button variant="destructive-outline" onClick={handleDelete} loading={deleteMutation.isPending}>
+              <Trash2 className="size-4" />
+              Delete
+            </Button>
+          )}
+          {canSend && (
+            <Button onClick={() => sendMutation.mutate()} loading={sendMutation.isPending}>
+              <Send className="size-4" />
+              Send to customer
+            </Button>
+          )}
+          {canConvert && (
+            <Button onClick={() => convertMutation.mutate()} loading={convertMutation.isPending}>
+              <CheckCircle2 className="size-4" />
+              Convert to order
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {canShare && (
+        <Card>
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Customer link</p>
+              <p className="caption truncate">{shareUrl(quote.share_token)}</p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={copyShareLink}>
+              <Copy className="size-4" />
+              {copied ? "Copied" : "Copy link"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {quote.status === "converted" && (
+        <Card className="border-tag-success">
+          <CardContent className="py-4 text-sm">
+            Converted to order {quote.order_number || quote.order_id} on {formatDateTime(quote.converted_at)}.
+          </CardContent>
+        </Card>
+      )}
+      {quote.status === "declined" && (
+        <Card className="border-destructive/50">
+          <CardContent className="py-4 text-sm">
+            Customer declined this quote on {formatDateTime(quote.declined_at)}.
+          </CardContent>
+        </Card>
+      )}
+      {quote.status === "expired" && (
+        <Card>
+          <CardContent className="py-4 text-sm text-content-secondary">
+            This quote expired on {formatDate(quote.expires_at)} without a response.
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Customer</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm flex flex-col gap-1">
+            <p className="text-foreground font-medium">{quote.customer_name}</p>
+            {quote.customer_email && <p>{quote.customer_email}</p>}
+            {quote.customer_phone && <p>{quote.customer_phone}</p>}
+            {(quote.address_line1 || quote.city) && (
+              <p className="mt-1">
+                {[quote.address_line1, quote.address_line2, quote.city, quote.state, quote.postcode, quote.country]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm flex flex-col gap-1">
+            <p>Expires {formatDate(quote.expires_at)}</p>
+            {quote.sent_at && <p>Sent {formatDateTime(quote.sent_at)}</p>}
+            {quote.viewed_at && <p>Viewed {formatDateTime(quote.viewed_at)}</p>}
+            {quote.accepted_at && <p>Accepted {formatDateTime(quote.accepted_at)}</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Items</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-content-secondary">
+                  <th className="px-4 py-2 font-medium">Item</th>
+                  <th className="px-4 py-2 font-medium text-right">Qty</th>
+                  <th className="px-4 py-2 font-medium text-right">Unit price</th>
+                  <th className="px-4 py-2 font-medium text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quote.items.map((item, index) => (
+                  <tr key={item.id ?? index} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2">
+                      <p className="text-foreground">{item.name}</p>
+                      {item.description && <p className="caption">{item.description}</p>}
+                    </td>
+                    <td className="px-4 py-2 text-right">{item.quantity}</td>
+                    <td className="px-4 py-2 text-right">{formatMoney(item.unit_price)}</td>
+                    <td className="px-4 py-2 text-right">
+                      {formatMoney(item.total ?? item.quantity * item.unit_price)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Separator />
+          <div className="flex flex-col gap-1.5 p-4 text-sm ml-auto max-w-xs">
+            <div className="flex justify-between text-content-secondary">
+              <span>Subtotal</span>
+              <span>{formatMoney(quote.sub_total)}</span>
+            </div>
+            {quote.total_discount > 0 && (
+              <div className="flex justify-between text-content-secondary">
+                <span>Discount</span>
+                <span>-{formatMoney(quote.total_discount)}</span>
+              </div>
+            )}
+            {quote.total_tax > 0 && (
+              <div className="flex justify-between text-content-secondary">
+                <span>Tax</span>
+                <span>{formatMoney(quote.total_tax)}</span>
+              </div>
+            )}
+            {quote.shipping_charges > 0 && (
+              <div className="flex justify-between text-content-secondary">
+                <span>Shipping</span>
+                <span>{formatMoney(quote.shipping_charges)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5">
+              <span>Total</span>
+              <span>{formatMoney(quote.total)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {quote.notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm whitespace-pre-wrap">{quote.notes}</CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
