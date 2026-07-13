@@ -4,7 +4,7 @@
       "Bash(docker buildx *)",
       "Bash(docker run *)",
       "Bash(python3 -c ' *)",
-      "Bash(docker run --rm -v __CMDSUB_OUTPUT__:/app -v /Users/ahmadbinhamid/dev/flowpos/web/flowpos-ui/packages:/flowpos-ui/packages -w /tmp/testapp node:22-alpine sh -c ' *)",
+      "Bash(docker run --rm -v __CMDSUB_OUTPUT__:/app -v /Users/ahmadbinhamid/dev/flowpos/web/ui-kit/packages:/ui-kit/packages -w /tmp/testapp node:22-alpine sh -c ' *)",
       "Bash(rm -rf node_modules/.tmp/*.tsbuildinfo && npx tsc -b 2>&1 | head -40)",
       "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/)",
       "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8082/)",

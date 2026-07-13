@@ -2,10 +2,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json ./
-# package.json references these via file:../../flowpos-ui/packages/*, which
-# resolves to /flowpos-ui/packages/* from /app — see additional_contexts in
+# package.json references these via file:../../ui-kit/packages/*, which
+# resolves to /ui-kit/packages/* from /app — see additional_contexts in
 # docker-compose.yml for where this comes from.
-COPY --from=flowpos-ui . /flowpos-ui
+COPY --from=ui-kit . /ui-kit
 # Deliberately not copying package-lock.json here: npm's arborist has a
 # long-standing bug (crashes with "Cannot read properties of undefined
 # (reading 'extraneous')") when reconciling a lockfile against a file:

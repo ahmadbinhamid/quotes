@@ -48,14 +48,14 @@ services:
     build:
       context: ./frontend
       # frontend/package.json pulls in the shared UI kit via local file:
-      # deps (file:../../flowpos-ui/packages/...). That workspace lives
+      # deps (file:../../ui-kit/packages/...). That workspace lives
       # outside this build context, so hand the builder the whole thing
       # under a named context the Dockerfile can COPY --from=. We need
-      # flowpos-ui/node_modules too, not just packages/ — the packages'
+      # ui-kit/node_modules too, not just packages/ — the packages'
       # own dependencies (e.g. class-variance-authority) only resolve
       # there, the same way they do for local (non-Docker) dev.
       additional_contexts:
-        - flowpos-ui=../flowpos-ui
+        - ui-kit=../ui-kit
     ports:
       # Host port 3001 (not 3000) — ai-builder's frontend maps 3000:80.
       - "${FRONTEND_HOST_PORT:-3001}:80"
