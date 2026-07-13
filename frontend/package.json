@@ -12,9 +12,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@flowposltd/apps-sdk": "file:../../flowpos-ui/packages/apps-sdk",
-    "@flowposltd/design-tokens": "file:../../flowpos-ui/packages/design-tokens",
-    "@flowposltd/ui": "file:../../flowpos-ui/packages/ui",
+    "@flowposltd/apps-sdk": "file:../../ui-kit/packages/apps-sdk",
+    "@flowposltd/design-tokens": "file:../../ui-kit/packages/design-tokens",
+    "@flowposltd/ui": "file:../../ui-kit/packages/ui",
     "@radix-ui/react-select": "^2.2.6",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.100.14",
