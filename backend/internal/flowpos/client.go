@@ -242,6 +242,14 @@ type CreateOrderItem struct {
 	ExtensionsData *CreateOrderExtensionsData  `json:"extensions_data,omitempty"`
 }
 
+// FlowPOS's numeric "mode" values for StoreOrderRequest — confirmed against
+// the tenant dashboard's own order-creation flow (CreateOrder.tsx), which is
+// the only place this mapping is documented.
+const (
+	OrderModeCollection = 3
+	OrderModeDelivery   = 5
+)
+
 // CreateOrderInput matches StoreOrderRequest's real validated shape — see
 // backend README/plan notes for how this differs from what this client used
 // to send (top-level customer_name/email/phone, address.line1/2, items with
@@ -252,7 +260,9 @@ type CreateOrderInput struct {
 	Address    *CreateOrderAddress   `json:"address,omitempty"`
 	Items      []CreateOrderItem     `json:"items"`
 	Note       string                `json:"note,omitempty"`
-	Mode       string                `json:"mode,omitempty"`
+	// Mode: OrderModeCollection or OrderModeDelivery.
+	Mode       int                   `json:"mode,omitempty"`
+	LocationID *uint64               `json:"location_id,omitempty"`
 }
 
 // CreateOrderResult only picks out the two fields the quote-conversion flow

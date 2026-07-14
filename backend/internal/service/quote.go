@@ -360,7 +360,51 @@ func (s *QuoteService) Decline(ctx context.Context, token string) (*models.Quote
 // custom line item named "Shipping". This is a pragmatic mapping, not a
 // confirmed business rule — worth checking against how the resulting order
 // actually looks once this runs against a real tenant.
-func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64) (*models.Quote, error) {
+// DeliveryAddressInput is the address collected at conversion time when
+// FulfillmentType is "delivery" — a fresh admin-provided input, not the
+// quote's own (billing) address snapshot.
+type DeliveryAddressInput struct {
+	AddressLine1 string
+	AddressLine2 string
+	City         string
+	State        string
+	Postcode     string
+	Country      string
+}
+
+// ConvertInput carries the fulfillment details an admin picks right before
+// converting — which FlowPOS location handles the order, and whether the
+// customer collects in-store or it ships to a delivery address. None of this
+// is persisted on the quote; it's only forwarded into the single FlowPOS
+// order-creation call this conversion makes.
+type ConvertInput struct {
+	LocationID      uint64
+	FulfillmentType string // "collection" | "delivery"
+	DeliveryAddress DeliveryAddressInput
+}
+
+func (in ConvertInput) validate() error {
+	if in.LocationID == 0 {
+		return fmt.Errorf("a location is required: %w", apperrors.ErrInvalidInput)
+	}
+	switch in.FulfillmentType {
+	case "collection":
+		return nil
+	case "delivery":
+		a := in.DeliveryAddress
+		if a.AddressLine1 == "" || a.City == "" || a.Postcode == "" || a.Country == "" {
+			return fmt.Errorf("a delivery address is required: %w", apperrors.ErrInvalidInput)
+		}
+		return nil
+	default:
+		return fmt.Errorf("fulfillment_type must be \"collection\" or \"delivery\": %w", apperrors.ErrInvalidInput)
+	}
+}
+
+func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, in ConvertInput) (*models.Quote, error) {
+	if err := in.validate(); err != nil {
+		return nil, err
+	}
 	q, err := s.quotes.GetByID(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
@@ -415,9 +459,16 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64) 
 		items = append(items, flowpos.CreateOrderItem{Name: "Shipping", Quantity: 1, Price: &price})
 	}
 
-	in := flowpos.CreateOrderInput{
-		Items: items,
-		Note:  fmt.Sprintf("Converted from quote %s", q.QuoteNumber),
+	mode := flowpos.OrderModeCollection
+	if in.FulfillmentType == "delivery" {
+		mode = flowpos.OrderModeDelivery
+	}
+	locationID := in.LocationID
+	orderInput := flowpos.CreateOrderInput{
+		Items:      items,
+		Note:       fmt.Sprintf("Converted from quote %s", q.QuoteNumber),
+		Mode:       mode,
+		LocationID: &locationID,
 	}
 	// Always send the nested customer object (snapshotted on the quote
 	// regardless of whether it came from a picked catalog customer or manual
@@ -425,21 +476,24 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64) 
 	// reads the order's display name/email/phone from this ad-hoc object
 	// alone, it does not backfill them from the customer_id relation.
 	if q.CustomerID != nil {
-		in.CustomerID = q.CustomerID
+		orderInput.CustomerID = q.CustomerID
 	}
 	var phone *string
 	if q.CustomerPhone != "" {
 		phone = &q.CustomerPhone
 	}
-	in.Customer = &flowpos.CreateOrderCustomer{Name: q.CustomerName, Email: q.CustomerEmail, Phone: phone}
-	if q.AddressLine1 != "" {
-		in.Address = &flowpos.CreateOrderAddress{
-			AddressLine1: q.AddressLine1, AddressLine2: q.AddressLine2, City: q.City, State: q.State,
-			Postcode: q.Postcode, Country: q.Country,
+	orderInput.Customer = &flowpos.CreateOrderCustomer{Name: q.CustomerName, Email: q.CustomerEmail, Phone: phone}
+	// The delivery address is the one picked at conversion time, not the
+	// quote's own (billing) address snapshot — collection orders send none.
+	if in.FulfillmentType == "delivery" {
+		a := in.DeliveryAddress
+		orderInput.Address = &flowpos.CreateOrderAddress{
+			AddressLine1: a.AddressLine1, AddressLine2: a.AddressLine2, City: a.City, State: a.State,
+			Postcode: a.Postcode, Country: a.Country,
 		}
 	}
 
-	result, err := s.flowpos.CreateOrder(ctx, installation.APIKey, in)
+	result, err := s.flowpos.CreateOrder(ctx, installation.APIKey, orderInput)
 	if err != nil {
 		return nil, fmt.Errorf("convert quote %s to order: %w", q.QuoteNumber, err)
 	}

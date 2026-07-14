@@ -42,8 +42,23 @@ export async function sendQuote(id: number): Promise<Quote> {
   return data.quote;
 }
 
-export async function convertQuoteToOrder(id: number): Promise<Quote> {
-  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/convert`);
+export type FulfillmentType = "collection" | "delivery";
+
+export interface ConvertQuoteInput {
+  location_id: number;
+  fulfillment_type: FulfillmentType;
+  delivery_address?: {
+    address_line1: string;
+    address_line2: string;
+    city: string;
+    state: string;
+    postcode: string;
+    country: string;
+  };
+}
+
+export async function convertQuoteToOrder(id: number, input: ConvertQuoteInput): Promise<Quote> {
+  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/convert`, input);
   return data.quote;
 }
 

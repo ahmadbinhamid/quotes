@@ -82,6 +82,21 @@ export interface CreateCustomerInput {
   phone?: string | null;
 }
 
+export interface CatalogLocation {
+  id: number;
+  name: string;
+  type?: string;
+  address?: {
+    address_line_1: string;
+    address_line_2?: string | null;
+    city: string;
+    state?: string;
+    post_code: string;
+    country?: { shortcode: string; name: string };
+  };
+  [key: string]: unknown;
+}
+
 // FlowPOS list endpoints come back as either a Laravel paginator
 // ({data: T[], ...}) or (locations) a plain array — normalize both to T[].
 function toArray<T>(value: unknown): T[] {
@@ -123,4 +138,11 @@ export async function listCustomers(search?: string): Promise<CatalogCustomer[]>
 export async function createCustomer(input: CreateCustomerInput): Promise<CatalogCustomer> {
   const { data } = await apiClient.post<{ customer: CatalogCustomer }>("/catalog/customers", input);
   return data.customer;
+}
+
+export async function listLocations(search?: string): Promise<CatalogLocation[]> {
+  const { data } = await apiClient.get<{ locations: unknown }>("/catalog/locations", {
+    params: { search },
+  });
+  return toArray<CatalogLocation>(data.locations);
 }

@@ -110,12 +110,44 @@ func (h *QuoteHandler) Send(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"quote": q})
 }
 
+// convertRequest is the fulfillment info an admin picks right before
+// converting — which FlowPOS location handles the order, and whether the
+// customer collects in-store or it ships to a delivery address.
+type convertRequest struct {
+	LocationID      uint64 `json:"location_id" binding:"required"`
+	FulfillmentType string `json:"fulfillment_type" binding:"required,oneof=collection delivery"`
+	DeliveryAddress struct {
+		AddressLine1 string `json:"address_line1" binding:"max=255"`
+		AddressLine2 string `json:"address_line2" binding:"max=255"`
+		City         string `json:"city" binding:"max=120"`
+		State        string `json:"state" binding:"max=120"`
+		Postcode     string `json:"postcode" binding:"max=32"`
+		Country      string `json:"country" binding:"max=8"`
+	} `json:"delivery_address"`
+}
+
 func (h *QuoteHandler) Convert(c *gin.Context) {
 	id, ok := quoteIDParam(c)
 	if !ok {
 		return
 	}
-	q, err := h.quotes.ConvertToOrder(c.Request.Context(), tenantID(c), id)
+	var in convertRequest
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	q, err := h.quotes.ConvertToOrder(c.Request.Context(), tenantID(c), id, service.ConvertInput{
+		LocationID:      in.LocationID,
+		FulfillmentType: in.FulfillmentType,
+		DeliveryAddress: service.DeliveryAddressInput{
+			AddressLine1: in.DeliveryAddress.AddressLine1,
+			AddressLine2: in.DeliveryAddress.AddressLine2,
+			City:         in.DeliveryAddress.City,
+			State:        in.DeliveryAddress.State,
+			Postcode:     in.DeliveryAddress.Postcode,
+			Country:      in.DeliveryAddress.Country,
+		},
+	})
 	if err != nil {
 		fail(c, err)
 		return

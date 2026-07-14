@@ -23,8 +23,16 @@ import {
 } from "@flowposltd/ui";
 import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
-import { deleteQuote, getQuote, sendQuote, convertQuoteToOrder, regeneratePaymentLink } from "@/lib/api/quotes";
+import {
+  deleteQuote,
+  getQuote,
+  sendQuote,
+  convertQuoteToOrder,
+  regeneratePaymentLink,
+  type ConvertQuoteInput,
+} from "@/lib/api/quotes";
 import { formatMoney, formatDate, formatDateTime } from "@/utils/quote-helpers";
 
 function shareUrl(token: string): string {
@@ -51,10 +59,11 @@ export default function QuoteDetailPage() {
   });
 
   const convertMutation = useMutation({
-    mutationFn: () => convertQuoteToOrder(quoteId),
+    mutationFn: (input: ConvertQuoteInput) => convertQuoteToOrder(quoteId, input),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       toast.success(updated.order_number ? `Order ${updated.order_number} created` : "Order created");
+      setConvertDialogOpen(false);
     },
   });
 
@@ -84,6 +93,7 @@ export default function QuoteDetailPage() {
   const [copied, setCopied] = useState(false);
   const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
 
   async function copyShareLink() {
     if (!quote) return;
@@ -156,7 +166,7 @@ export default function QuoteDetailPage() {
             </Button>
           )}
           {canConvert && (
-            <Button onClick={() => convertMutation.mutate()} loading={convertMutation.isPending}>
+            <Button onClick={() => setConvertDialogOpen(true)}>
               <CheckCircle2 className="size-4" />
               Convert to order
             </Button>
@@ -370,6 +380,13 @@ export default function QuoteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConvertToOrderPanel
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        onConfirm={(input) => convertMutation.mutate(input)}
+        submitting={convertMutation.isPending}
+      />
     </div>
   );
 }
