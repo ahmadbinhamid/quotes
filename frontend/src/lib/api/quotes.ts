@@ -3,6 +3,7 @@ import type { Quote, QuoteInput } from "@/types";
 
 export interface ListQuotesParams {
   status?: string;
+  exclude_expired?: boolean;
   limit?: number;
   offset?: number;
 }

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Button, Card } from "@flowposltd/ui";
+import { Button, Card, Pagination, PER_PAGE_OPTIONS } from "@flowposltd/ui";
 import { Plus } from "lucide-react";
 import { listQuotes } from "@/lib/api/quotes";
 import { QuotesEmptyState } from "@/components/quotes/QuotesEmptyState";
@@ -10,23 +10,41 @@ import { QuotesTable } from "@/components/quotes/QuotesTable";
 
 export default function QuotesListPage() {
   const [filter, setFilter] = useState<QuotesStatusFilterValue>("active");
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(PER_PAGE_OPTIONS[0]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["quotes", filter],
-    queryFn: () => listQuotes({ limit: 100, status: filter === "active" ? undefined : filter }),
+    queryKey: ["quotes", filter, page, itemsPerPage],
+    queryFn: () =>
+      listQuotes({
+        limit: itemsPerPage,
+        offset: (page - 1) * itemsPerPage,
+        // "active" has no backend status of its own — it means everything
+        // except expired, so the backend excludes expired rows directly
+        // rather than us over-fetching and filtering client-side (which
+        // would make `total`/pagination wrong for this view).
+        status: filter === "active" ? undefined : filter,
+        exclude_expired: filter === "active",
+      }),
   });
 
-  // "active" has no backend status of its own — it's fetched unfiltered and
-  // has expired quotes stripped out client-side, so expired ones only ever
-  // show up when the Expired filter is explicitly selected.
-  const quotes = useMemo(() => {
-    if (!data) return [];
-    return filter === "active" ? data.quotes.filter((quote) => quote.status !== "expired") : data.quotes;
-  }, [data, filter]);
+  const quotes = data?.quotes ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+
+  function changeFilter(value: QuotesStatusFilterValue) {
+    setFilter(value);
+    setPage(1);
+  }
+
+  function changeItemsPerPage(limit: number) {
+    setItemsPerPage(limit);
+    setPage(1);
+  }
 
   return (
-    <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
-      <div className="flex items-center justify-between">
+    <div className="p-6 flex flex-col gap-5 h-full overflow-hidden">
+      <div className="flex items-center justify-between shrink-0">
         <div>
           <h1>Quotes</h1>
           <p className="lead mt-0.5">
@@ -41,15 +59,31 @@ export default function QuotesListPage() {
         </Button>
       </div>
 
-      <QuotesStatusFilter value={filter} onChange={setFilter} />
+      <div className="shrink-0">
+        <QuotesStatusFilter value={filter} onChange={changeFilter} />
+      </div>
 
-      <Card className="overflow-hidden">
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {isLoading ? (
           <div className="p-6 text-sm text-content-secondary">Loading…</div>
         ) : quotes.length === 0 ? (
           <QuotesEmptyState hasFilter={filter !== "active"} />
         ) : (
-          <QuotesTable quotes={quotes} />
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <QuotesTable quotes={quotes} />
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="shrink-0 px-4 border-t border-border">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={total}
+              itemsPerPage={itemsPerPage}
+              onLimitChange={changeItemsPerPage}
+            />
+          </div>
         )}
       </Card>
     </div>

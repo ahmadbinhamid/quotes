@@ -14,8 +14,12 @@ import (
 // by the implementation.
 type QuoteFilter struct {
 	Status string
-	Limit  int
-	Offset int
+	// ExcludeExpired drops expired quotes from the result — used by the
+	// default ("active") list view, which shows everything except expired
+	// rather than one exact status match. Ignored if Status is also set.
+	ExcludeExpired bool
+	Limit          int
+	Offset         int
 }
 
 type QuoteRepository interface {
@@ -77,6 +81,8 @@ func (r *quoteRepository) List(ctx context.Context, tenantID uint64, filter Quot
 	base := r.db.WithContext(ctx).Model(&models.Quote{}).Where("tenant_id = ?", tenantID)
 	if filter.Status != "" {
 		base = base.Where("status = ?", filter.Status)
+	} else if filter.ExcludeExpired {
+		base = base.Where("status <> ?", models.QuoteStatusExpired)
 	}
 
 	var total int64
