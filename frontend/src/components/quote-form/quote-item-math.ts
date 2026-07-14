@@ -13,6 +13,7 @@ export function itemFromProduct(product: PickedProduct): QuoteItemInput {
     quantity: 1,
     unit_price: product.unitPrice,
     tax_amount: product.taxPerUnit,
+    tax_inclusive: product.taxInclusive,
     addons: product.addons?.map((a) => ({
       extension_id: a.extensionId,
       name: a.name,

@@ -126,8 +126,8 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative">
+    <div className="flex flex-col gap-2 h-full">
+      <div className="relative shrink-0">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-content-secondary" />
         <Input
           className="pl-8"
@@ -136,7 +136,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="max-h-48 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border divide-y divide-border">
         {isFetching && <p className="p-3 text-sm text-content-secondary">Searching…</p>}
         {!isFetching && (customers?.length ?? 0) === 0 && (
           <p className="p-3 text-sm text-content-secondary">No customers found.</p>
@@ -155,7 +155,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
           </button>
         ))}
       </div>
-      <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => setMode("manual")}>
+      <Button type="button" variant="secondary" size="sm" className="self-start shrink-0" onClick={() => setMode("manual")}>
         <UserPlus className="size-4" />
         Enter customer details manually
       </Button>

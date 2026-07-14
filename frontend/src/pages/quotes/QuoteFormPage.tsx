@@ -14,9 +14,9 @@ import { createQuote, getQuote, updateQuote } from "@/lib/api/quotes";
 import type { QuoteInput, QuoteItemInput } from "@/types";
 
 const STEPS: StepperStep[] = [
-  { label: "Expiry date" },
-  { label: "Customer" },
-  { label: "Products" },
+  { label: "Set expiry date" },
+  { label: "Choose customer" },
+  { label: "Add products" },
   { label: "Review & delivery" },
 ];
 
@@ -106,15 +106,6 @@ export default function QuoteFormPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function addressPatch(patch: Partial<{ addressLine1: string; addressLine2: string; city: string; state: string; postcode: string; country: string }>) {
-    if (patch.addressLine1 !== undefined) setAddressLine1(patch.addressLine1);
-    if (patch.addressLine2 !== undefined) setAddressLine2(patch.addressLine2);
-    if (patch.city !== undefined) setCity(patch.city);
-    if (patch.state !== undefined) setState(patch.state);
-    if (patch.postcode !== undefined) setPostcode(patch.postcode);
-    if (patch.country !== undefined) setCountry(patch.country);
-  }
-
   const canContinue = useMemo(() => {
     switch (stepIndex) {
       case 0:
@@ -201,8 +192,8 @@ export default function QuoteFormPage() {
   const isLastStep = stepIndex === STEPS.length - 1;
 
   return (
-    <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
-      <div className="flex items-center gap-3">
+    <div className="p-6 flex flex-col gap-5 h-full overflow-hidden">
+      <div className="flex items-center gap-3 shrink-0">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/">
             <ArrowLeft className="size-4" />
@@ -211,43 +202,43 @@ export default function QuoteFormPage() {
         <h1>{isEdit ? `Edit ${existing?.quote_number ?? "quote"}` : "New quote"}</h1>
       </div>
 
-      <Stepper steps={STEPS} currentStep={stepIndex} />
+      <div className="shrink-0">
+        <Stepper steps={STEPS} currentStep={stepIndex} />
+      </div>
 
-      {stepIndex === 0 && <ExpiryDateStep value={expiresAt} onChange={setExpiresAt} />}
-      {stepIndex === 1 && <CustomerStep value={customer} onChange={setCustomer} />}
-      {stepIndex === 2 && (
-        <ProductsStep
-          items={items}
-          onAdd={(product) => setItems((prev) => [...prev, itemFromProduct(product)])}
-          onUpdateItem={updateItem}
-          onRemoveItem={removeItem}
-          onAddCustomLine={() => setItems((prev) => [...prev, emptyItem()])}
-          discount={discount}
-          onDiscountChange={setDiscount}
-          shipping={shipping}
-          onShippingChange={setShipping}
-          subtotal={subtotal}
-          total={total}
-        />
-      )}
-      {stepIndex === 3 && (
-        <ReviewStep
-          notes={notes}
-          onNotesChange={setNotes}
-          address={{ addressLine1, addressLine2, city, state, postcode, country }}
-          onAddressChange={addressPatch}
-          customer={customer}
-          expiresAt={expiresAt}
-          items={items}
-          subtotal={subtotal}
-          totalTax={totalTax}
-          discount={discount}
-          shipping={shipping}
-          total={total}
-        />
-      )}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {stepIndex === 0 && <ExpiryDateStep value={expiresAt} onChange={setExpiresAt} />}
+        {stepIndex === 1 && <CustomerStep value={customer} onChange={setCustomer} />}
+        {stepIndex === 2 && (
+          <ProductsStep
+            items={items}
+            onAdd={(product) => setItems((prev) => [...prev, itemFromProduct(product)])}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+            onAddCustomLine={() => setItems((prev) => [...prev, emptyItem()])}
+            discount={discount}
+            onDiscountChange={setDiscount}
+            shipping={shipping}
+            onShippingChange={setShipping}
+            subtotal={subtotal}
+            total={total}
+          />
+        )}
+        {stepIndex === 3 && (
+          <ReviewStep
+            customer={customer}
+            expiresAt={expiresAt}
+            items={items}
+            subtotal={subtotal}
+            totalTax={totalTax}
+            discount={discount}
+            shipping={shipping}
+            total={total}
+          />
+        )}
+      </div>
 
-      <div className="flex items-center justify-between gap-2 mt-auto pt-2">
+      <div className="flex items-center justify-between gap-2 shrink-0 pt-2">
         <div>
           {stepIndex > 0 && (
             <Button type="button" variant="ghost" onClick={goBack}>

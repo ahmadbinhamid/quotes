@@ -8,11 +8,11 @@ interface CustomerStepProps {
 
 export function CustomerStep({ value, onChange }: CustomerStepProps) {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full flex flex-col">
+      <CardHeader className="shrink-0">
         <CardTitle>Customer</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 flex flex-col">
         <CustomerSelector value={value} onChange={onChange} />
       </CardContent>
     </Card>

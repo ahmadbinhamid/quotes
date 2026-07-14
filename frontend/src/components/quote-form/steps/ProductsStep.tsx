@@ -33,12 +33,12 @@ export function ProductsStep({
   const hasItems = items.length > 0;
 
   return (
-    <div className={`grid gap-4 items-start ${hasItems ? "grid-cols-1 lg:grid-cols-[3fr_2fr]" : "grid-cols-1"}`}>
-      <Card>
-        <CardHeader>
+    <div className={`grid gap-4 h-full ${hasItems ? "grid-cols-1 lg:grid-cols-[3fr_2fr]" : "grid-cols-1"}`}>
+      <Card className="h-full flex flex-col min-h-0">
+        <CardHeader className="shrink-0">
           <CardTitle>Add products</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 min-h-0 flex flex-col">
           <ProductPicker onAdd={onAdd} />
         </CardContent>
       </Card>

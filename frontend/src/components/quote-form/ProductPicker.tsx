@@ -25,6 +25,10 @@ export interface PickedProduct {
   name: string;
   unitPrice: number;
   taxPerUnit?: number;
+  // Whether taxPerUnit is baked into unitPrice (VAT-inclusive) or added on
+  // top of it (VAT-exclusive) — see computeItemTax. Undefined when there's
+  // no tax at all.
+  taxInclusive?: boolean;
   addons?: PickedAddon[];
 }
 
@@ -116,6 +120,7 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
       name: variant?.name ? `${productName} - ${variant.name}` : productName,
       unitPrice,
       taxPerUnit: taxPerUnit > 0 ? taxPerUnit : undefined,
+      taxInclusive: taxPerUnit > 0 ? Boolean(tax.isVatInclusive) : undefined,
       addons: addons.length > 0 ? addons : undefined,
     });
     setStage(null);
@@ -153,8 +158,8 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="relative">
+    <div className="flex flex-col gap-2 h-full">
+      <div className="relative shrink-0">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-content-secondary" />
         <Input
           className="pl-8"
@@ -163,7 +168,7 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border divide-y divide-border">
         {isFetching && <p className="p-3 text-sm text-content-secondary">Searching…</p>}
         {!isFetching && (products?.length ?? 0) === 0 && (
           <p className="p-3 text-sm text-content-secondary">No products found.</p>

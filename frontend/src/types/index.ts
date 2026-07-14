@@ -73,6 +73,12 @@ export interface QuoteItemInput {
   quantity: number;
   unit_price: number;
   tax_amount?: number;
+  // Client-side-only display hint — whether tax_amount is baked into
+  // unit_price (VAT-inclusive pricing) or added on top of it (VAT-exclusive).
+  // Only known for items just picked in this session (see ProductPicker);
+  // absent for items reloaded from an existing quote, since the backend
+  // doesn't persist this flag. Never read by the backend.
+  tax_inclusive?: boolean;
   addons?: QuoteItemAddon[];
 }
 
