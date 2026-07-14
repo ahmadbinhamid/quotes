@@ -7,6 +7,7 @@ import { listQuotes } from "@/lib/api/quotes";
 import { QuotesEmptyState } from "@/components/quotes/QuotesEmptyState";
 import { QuotesStatusFilter, type QuotesStatusFilterValue } from "@/components/quotes/QuotesStatusFilter";
 import { QuotesTable } from "@/components/quotes/QuotesTable";
+import { QuotesTableSkeleton } from "@/components/quotes/QuotesTableSkeleton";
 
 export default function QuotesListPage() {
   const [filter, setFilter] = useState<QuotesStatusFilterValue>("active");
@@ -65,7 +66,9 @@ export default function QuotesListPage() {
 
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="p-6 text-sm text-content-secondary">Loading…</div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <QuotesTableSkeleton rows={itemsPerPage} />
+          </div>
         ) : quotes.length === 0 ? (
           <QuotesEmptyState hasFilter={filter !== "active"} />
         ) : (
