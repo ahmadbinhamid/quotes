@@ -1,66 +1,24 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Button,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Input,
-  Textarea,
-  Alert,
-  AlertDescription,
-} from "@flowposltd/ui";
-import { Plus, Trash2, ArrowLeft, Tag } from "lucide-react";
+import { Alert, AlertDescription, Button, Stepper, type StepperStep } from "@flowposltd/ui";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { FormField } from "@/components/ui/form-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProductPicker, type PickedProduct } from "@/components/quote-form/ProductPicker";
-import { CustomerSelector, type QuoteCustomer } from "@/components/quote-form/CustomerSelector";
+import { CustomerStep } from "@/components/quote-form/steps/CustomerStep";
+import { ExpiryDateStep } from "@/components/quote-form/steps/ExpiryDateStep";
+import { ProductsStep } from "@/components/quote-form/steps/ProductsStep";
+import { ReviewStep } from "@/components/quote-form/steps/ReviewStep";
+import { emptyItem, itemFromProduct, itemTax, itemTotal } from "@/components/quote-form/quote-item-math";
+import type { QuoteCustomer } from "@/components/quote-form/CustomerSelector";
 import { createQuote, getQuote, updateQuote } from "@/lib/api/quotes";
 import type { QuoteInput, QuoteItemInput } from "@/types";
-import { formatMoney } from "@/utils/quote-helpers";
 
-function emptyItem(): QuoteItemInput {
-  return { name: "", description: "", quantity: 1, unit_price: 0 };
-}
-
-function itemFromProduct(product: PickedProduct): QuoteItemInput {
-  return {
-    variant_id: product.variantId,
-    name: product.name,
-    description: "",
-    quantity: 1,
-    unit_price: product.unitPrice,
-    tax_amount: product.taxPerUnit,
-    addons: product.addons?.map((a) => ({
-      extension_id: a.extensionId,
-      name: a.name,
-      price: a.price,
-      quantity: a.quantity,
-    })),
-  };
-}
-
-// Addon cost is added once per line (not multiplied by the item's own
-// quantity) — matches how FlowPOS attaches a flat addons list to a line.
-// Tax is NOT added here — unit_price already reflects any VAT-exclusive
-// uplift computed at add-time, tax_amount is purely a display breakdown.
-function itemTotal(item: QuoteItemInput): number {
-  const addonsCost = (item.addons ?? []).reduce((sum, a) => sum + a.price * a.quantity, 0);
-  return (Number(item.quantity) || 0) * (Number(item.unit_price) || 0) + addonsCost;
-}
-
-function itemTax(item: QuoteItemInput): number {
-  return (Number(item.quantity) || 0) * (Number(item.tax_amount) || 0);
-}
-
-// FlowPOS validates address.country against its address_country table
-// (exists:address_country,shortcode) — "GB" is the only seeded shortcode in
-// this environment, matching the tenant dashboard's own delivery-address
-// select (FulfillmentType.tsx), which hardcodes the same single option.
-const COUNTRIES = [{ value: "GB", label: "United Kingdom" }];
+const STEPS: StepperStep[] = [
+  { label: "Expiry date" },
+  { label: "Customer" },
+  { label: "Products" },
+  { label: "Review & delivery" },
+];
 
 function defaultExpiry(): string {
   const d = new Date();
@@ -80,6 +38,8 @@ export default function QuoteFormPage() {
     enabled: isEdit,
   });
 
+  const [stepIndex, setStepIndex] = useState(0);
+  const [expiresAt, setExpiresAt] = useState(defaultExpiry());
   const [customer, setCustomer] = useState<QuoteCustomer>({ name: "", email: "", phone: "" });
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
@@ -87,14 +47,14 @@ export default function QuoteFormPage() {
   const [state, setState] = useState("");
   const [postcode, setPostcode] = useState("");
   const [country, setCountry] = useState("GB");
-  const [items, setItems] = useState<QuoteItemInput[]>([emptyItem()]);
+  const [items, setItems] = useState<QuoteItemInput[]>([]);
   const [discount, setDiscount] = useState(0);
   const [shipping, setShipping] = useState(0);
   const [notes, setNotes] = useState("");
-  const [expiresAt, setExpiresAt] = useState(defaultExpiry());
 
   useEffect(() => {
     if (!existing) return;
+    setExpiresAt(existing.expires_at.slice(0, 10));
     setCustomer({
       id: existing.customer_id ?? undefined,
       name: existing.customer_name,
@@ -108,22 +68,19 @@ export default function QuoteFormPage() {
     setPostcode(existing.postcode);
     setCountry(existing.country);
     setItems(
-      existing.items.length
-        ? existing.items.map((item) => ({
-            variant_id: item.variant_id,
-            name: item.name,
-            description: item.description ?? "",
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            tax_amount: item.tax_amount,
-            addons: item.addons,
-          }))
-        : [emptyItem()]
+      existing.items.map((item) => ({
+        variant_id: item.variant_id,
+        name: item.name,
+        description: item.description ?? "",
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        tax_amount: item.tax_amount,
+        addons: item.addons,
+      }))
     );
     setDiscount(existing.total_discount);
     setShipping(existing.shipping_charges);
     setNotes(existing.notes);
-    setExpiresAt(existing.expires_at.slice(0, 10));
   }, [existing]);
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + itemTotal(item), 0), [items]);
@@ -146,11 +103,48 @@ export default function QuoteFormPage() {
   }
 
   function removeItem(index: number) {
-    setItems((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function addressPatch(patch: Partial<{ addressLine1: string; addressLine2: string; city: string; state: string; postcode: string; country: string }>) {
+    if (patch.addressLine1 !== undefined) setAddressLine1(patch.addressLine1);
+    if (patch.addressLine2 !== undefined) setAddressLine2(patch.addressLine2);
+    if (patch.city !== undefined) setCity(patch.city);
+    if (patch.state !== undefined) setState(patch.state);
+    if (patch.postcode !== undefined) setPostcode(patch.postcode);
+    if (patch.country !== undefined) setCountry(patch.country);
+  }
+
+  const canContinue = useMemo(() => {
+    switch (stepIndex) {
+      case 0:
+        return Boolean(expiresAt);
+      case 1:
+        return Boolean(customer.name?.trim());
+      case 2:
+        return items.some((item) => item.name?.trim().length > 0);
+      default:
+        return true;
+    }
+  }, [stepIndex, expiresAt, customer, items]);
+
+  function goBack() {
+    setStepIndex((i) => Math.max(0, i - 1));
+  }
+
+  function goNext() {
+    if (!canContinue) return;
+    setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
+  }
+
+  // Deliberately not a native <form onSubmit> — this is button-driven only.
+  // A native form lets the browser submit on Enter from *any* focused
+  // submittable control (a text input, a Radix Select's hidden native
+  // <select>, etc.), which kept saving the quote before the user meant to,
+  // no matter how narrowly we tried to filter it via a keydown handler.
+  // Calling the mutation directly from the button's onClick sidesteps that
+  // whole class of bug.
+  function submitQuote() {
     if (!customer.name?.trim()) {
       toast.error("Pick or enter a customer before saving.");
       return;
@@ -204,8 +198,10 @@ export default function QuoteFormPage() {
     );
   }
 
+  const isLastStep = stepIndex === STEPS.length - 1;
+
   return (
-    <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
+    <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/">
@@ -215,162 +211,65 @@ export default function QuoteFormPage() {
         <h1>{isEdit ? `Edit ${existing?.quote_number ?? "quote"}` : "New quote"}</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <FormField label="Expiry date" required hint="The quote can no longer be accepted after this date.">
-            <Input
-              type="date"
-              className="max-w-xs"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              required
-            />
-          </FormField>
-          <CustomerSelector value={customer} onChange={setCustomer} />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Address line 1" className="col-span-2">
-              <Input maxLength={255} value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} />
-            </FormField>
-            <FormField label="Address line 2" className="col-span-2">
-              <Input maxLength={255} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
-            </FormField>
-            <FormField label="City">
-              <Input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} />
-            </FormField>
-            <FormField label="State / county">
-              <Input maxLength={120} value={state} onChange={(e) => setState(e.target.value)} />
-            </FormField>
-            <FormField label="Postcode">
-              <Input maxLength={32} value={postcode} onChange={(e) => setPostcode(e.target.value)} />
-            </FormField>
-            <FormField label="Country">
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          </div>
-        </CardContent>
-      </Card>
+      <Stepper steps={STEPS} currentStep={stepIndex} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add products</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProductPicker onAdd={(product) => setItems((prev) => [...prev, itemFromProduct(product)])} />
-        </CardContent>
-      </Card>
+      {stepIndex === 0 && <ExpiryDateStep value={expiresAt} onChange={setExpiresAt} />}
+      {stepIndex === 1 && <CustomerStep value={customer} onChange={setCustomer} />}
+      {stepIndex === 2 && (
+        <ProductsStep
+          items={items}
+          onAdd={(product) => setItems((prev) => [...prev, itemFromProduct(product)])}
+          onUpdateItem={updateItem}
+          onRemoveItem={removeItem}
+          onAddCustomLine={() => setItems((prev) => [...prev, emptyItem()])}
+          discount={discount}
+          onDiscountChange={setDiscount}
+          shipping={shipping}
+          onShippingChange={setShipping}
+          subtotal={subtotal}
+          total={total}
+        />
+      )}
+      {stepIndex === 3 && (
+        <ReviewStep
+          notes={notes}
+          onNotesChange={setNotes}
+          address={{ addressLine1, addressLine2, city, state, postcode, country }}
+          onAddressChange={addressPatch}
+          customer={customer}
+          expiresAt={expiresAt}
+          items={items}
+          subtotal={subtotal}
+          totalTax={totalTax}
+          discount={discount}
+          shipping={shipping}
+          total={total}
+        />
+      )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Items</CardTitle>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
-            <Plus className="size-4" />
-            Add custom line
-          </Button>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {items.map((item, index) => (
-            <div key={index} className="flex flex-col gap-1">
-              <div className="grid grid-cols-[1fr_90px_120px_120px_auto] gap-2 items-center">
-                <div className="relative">
-                  {item.variant_id && (
-                    <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-content-secondary" />
-                  )}
-                  <Input
-                    className={item.variant_id ? "pl-8" : undefined}
-                    placeholder="Item name"
-                    value={item.name}
-                    onChange={(e) => updateItem(index, { name: e.target.value })}
-                  />
-                </div>
-                <Input
-                  type="number"
-                  min={0}
-                  step="1"
-                  placeholder="Qty"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(index, { quantity: Number(e.target.value) })}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="Unit price"
-                  value={item.unit_price}
-                  onChange={(e) => updateItem(index, { unit_price: Number(e.target.value) })}
-                />
-                <div className="flex h-9 items-center px-3 text-sm text-content-secondary">
-                  {formatMoney(itemTotal(item))}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItem(index)}
-                  disabled={items.length === 1}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-              {item.addons && item.addons.length > 0 && (
-                <p className="pl-3 text-xs text-content-secondary">
-                  + {item.addons.map((a) => `${a.name} (${formatMoney(a.price)})`).join(", ")}
-                </p>
-              )}
-              {itemTax(item) > 0 && (
-                <p className="pl-3 text-xs text-content-secondary">Includes VAT: {formatMoney(itemTax(item))}</p>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="max-w-md self-end w-full">
-        <CardContent className="flex flex-col gap-3">
-          <FormField label="Discount">
-            <Input type="number" min={0} step="0.01" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
-          </FormField>
-          <FormField label="Shipping">
-            <Input type="number" min={0} step="0.01" value={shipping} onChange={(e) => setShipping(Number(e.target.value))} />
-          </FormField>
-          {totalTax > 0 && (
-            <div className="flex items-center justify-between text-sm text-content-secondary">
-              <span>VAT (included above)</span>
-              <span>{formatMoney(totalTax)}</span>
-            </div>
+      <div className="flex items-center justify-between gap-2 mt-auto pt-2">
+        <div>
+          {stepIndex > 0 && (
+            <Button type="button" variant="ghost" onClick={goBack}>
+              Back
+            </Button>
           )}
-          <div className="flex items-center justify-between border-t border-border pt-3 text-sm font-semibold text-foreground">
-            <span>Total</span>
-            <span>{formatMoney(total)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <FormField label="Notes">
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-      </FormField>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" asChild>
-          <Link to="/">Cancel</Link>
-        </Button>
-        <Button type="submit" loading={saveMutation.isPending}>
-          {isEdit ? "Save changes" : "Create quote"}
-        </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="secondary" asChild>
+            <Link to="/">Cancel</Link>
+          </Button>
+          {isLastStep ? (
+            <Button type="button" onClick={submitQuote} loading={saveMutation.isPending}>
+              {isEdit ? "Save changes" : "Create quote"}
+            </Button>
+          ) : (
+            <Button type="button" onClick={goNext} disabled={!canContinue}>
+              Continue
+            </Button>
+          )}
+        </div>
       </div>
-    </form>
+    </div>
   );
 }

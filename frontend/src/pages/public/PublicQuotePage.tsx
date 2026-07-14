@@ -1,7 +1,21 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Separator } from "@flowposltd/ui";
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Badge,
+  Separator,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@flowposltd/ui";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { acceptPublicQuote, declinePublicQuote, getPublicQuote } from "@/lib/api/public-quotes";
@@ -104,33 +118,31 @@ export default function PublicQuotePage() {
             <CardTitle>Items</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-content-secondary">
-                    <th className="px-4 py-2 font-medium">Item</th>
-                    <th className="px-4 py-2 font-medium text-right">Qty</th>
-                    <th className="px-4 py-2 font-medium text-right">Price</th>
-                    <th className="px-4 py-2 font-medium text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quote.items.map((item, index) => (
-                    <tr key={item.id ?? index} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2">
-                        <p className="text-foreground">{item.name}</p>
-                        {item.description && <p className="caption">{item.description}</p>}
-                      </td>
-                      <td className="px-4 py-2 text-right">{item.quantity}</td>
-                      <td className="px-4 py-2 text-right">{formatMoney(item.unit_price)}</td>
-                      <td className="px-4 py-2 text-right">
-                        {formatMoney(item.total ?? item.quantity * item.unit_price)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quote.items.map((item, index) => (
+                  <TableRow key={item.id ?? index}>
+                    <TableCell>
+                      <p className="text-foreground">{item.name}</p>
+                      {item.description && <p className="caption">{item.description}</p>}
+                    </TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{formatMoney(item.unit_price)}</TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(item.total ?? item.quantity * item.unit_price)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
             <Separator />
             <div className="flex flex-col gap-1.5 p-4 text-sm ml-auto max-w-xs">
               <div className="flex justify-between text-content-secondary">

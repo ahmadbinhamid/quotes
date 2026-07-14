@@ -7,12 +7,12 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   accepted: "Accepted",
   declined: "Declined",
   expired: "Expired",
-  converted: "Converted",
+  converted: "Order Placed",
 };
 
 export const QUOTE_STATUS_BADGE_VARIANT: Record<
   QuoteStatus,
-  "status-neutral" | "status-info" | "status-success" | "status-danger" | "status-warning"
+  "status-neutral" | "status-info" | "status-success" | "status-danger" | "status-warning" | "default"
 > = {
   draft: "status-neutral",
   sent: "status-info",
@@ -20,7 +20,7 @@ export const QUOTE_STATUS_BADGE_VARIANT: Record<
   accepted: "status-success",
   declined: "status-danger",
   expired: "status-warning",
-  converted: "status-success",
+  converted: "default",
 };
 
 export function formatMoney(value: number | undefined | null): string {

@@ -1,15 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-} from "@flowposltd/ui";
+import { Button, Checkbox, Input, SidePanel, SidePanelBody, SidePanelFooter } from "@flowposltd/ui";
 import { Plus, Search } from "lucide-react";
 import {
   getProduct,
@@ -205,77 +196,77 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
         ))}
       </div>
 
-      <Dialog open={stage?.kind === "variants"} onOpenChange={(open) => !open && setStage(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{stage?.kind === "variants" ? stage.productName : ""} — choose a variant</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-1.5 max-h-80 overflow-y-auto">
-            {stage?.kind === "variants" &&
-              stage.variants.map((variant) => (
-                <button
-                  key={variant.id}
-                  type="button"
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5 text-left hover:bg-primary/5"
-                  onClick={() => proceedWithVariant(stage.productName, variant, variant.price, stage.tax)}
-                >
-                  <span className="text-sm font-medium text-foreground">
-                    {variant.name ?? `Variant #${variant.id}`}
-                  </span>
-                  <span className="text-sm text-content-secondary">{formatMoney(variant.price)}</span>
-                </button>
-              ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SidePanel
+        open={stage?.kind === "variants"}
+        onOpenChange={(open) => !open && setStage(null)}
+        title={stage?.kind === "variants" ? stage.productName : ""}
+        description="Choose a variant"
+      >
+        <SidePanelBody className="flex flex-col gap-1.5">
+          {stage?.kind === "variants" &&
+            stage.variants.map((variant) => (
+              <button
+                key={variant.id}
+                type="button"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border p-2.5 text-left hover:bg-primary/5"
+                onClick={() => proceedWithVariant(stage.productName, variant, variant.price, stage.tax)}
+              >
+                <span className="text-sm font-medium text-foreground">
+                  {variant.name ?? `Variant #${variant.id}`}
+                </span>
+                <span className="text-sm text-content-secondary">{formatMoney(variant.price)}</span>
+              </button>
+            ))}
+        </SidePanelBody>
+      </SidePanel>
 
-      <Dialog open={stage?.kind === "addons"} onOpenChange={(open) => !open && setStage(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{stage?.kind === "addons" ? stage.productName : ""} — add-ons</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 max-h-80 overflow-y-auto">
-            {stage?.kind === "addons" &&
-              stage.groups.map((group) => (
-                <div key={group.id} className="flex flex-col gap-1.5">
-                  <p className="text-sm font-medium text-foreground">
-                    {group.name}
-                    {group.min_selection > 0 && <span className="text-destructive ml-1">*</span>}
-                    <span className="ml-2 text-xs font-normal text-content-secondary">
-                      {group.min_selection > 0
-                        ? `Pick ${group.min_selection}${
-                            group.max_selection > group.min_selection ? `–${group.max_selection}` : ""
-                          }`
-                        : group.max_selection > 0
-                          ? `Pick up to ${group.max_selection}`
-                          : "Optional"}
+      <SidePanel
+        open={stage?.kind === "addons"}
+        onOpenChange={(open) => !open && setStage(null)}
+        title={stage?.kind === "addons" ? stage.productName : ""}
+        description="Add-ons"
+      >
+        <SidePanelBody className="flex flex-col gap-4">
+          {stage?.kind === "addons" &&
+            stage.groups.map((group) => (
+              <div key={group.id} className="flex flex-col gap-1.5">
+                <p className="text-sm font-medium text-foreground">
+                  {group.name}
+                  {group.min_selection > 0 && <span className="text-destructive ml-1">*</span>}
+                  <span className="ml-2 text-xs font-normal text-content-secondary">
+                    {group.min_selection > 0
+                      ? `Pick ${group.min_selection}${
+                          group.max_selection > group.min_selection ? `–${group.max_selection}` : ""
+                        }`
+                      : group.max_selection > 0
+                        ? `Pick up to ${group.max_selection}`
+                        : "Optional"}
+                  </span>
+                </p>
+                {group.addons.map((addon) => (
+                  <label
+                    key={addon.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border p-2 text-sm cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedAddonIds.has(addon.id)}
+                        onCheckedChange={() => toggleAddon(addon.id, group)}
+                      />
+                      {addon.name}
                     </span>
-                  </p>
-                  {group.addons.map((addon) => (
-                    <label
-                      key={addon.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border p-2 text-sm cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedAddonIds.has(addon.id)}
-                          onCheckedChange={() => toggleAddon(addon.id, group)}
-                        />
-                        {addon.name}
-                      </span>
-                      <span className="text-content-secondary">+{formatMoney(addon.price)}</span>
-                    </label>
-                  ))}
-                </div>
-              ))}
-          </div>
-          <DialogFooter>
-            <Button type="button" disabled={!addonsValid} onClick={confirmAddons}>
-              Add to quote
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                    <span className="text-content-secondary">+{formatMoney(addon.price)}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+        </SidePanelBody>
+        <SidePanelFooter>
+          <Button type="button" className="w-full" disabled={!addonsValid} onClick={confirmAddons}>
+            Add to quote
+          </Button>
+        </SidePanelFooter>
+      </SidePanel>
     </div>
   );
 }

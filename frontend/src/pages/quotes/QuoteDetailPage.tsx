@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  Badge,
   Separator,
   Dialog,
   DialogContent,
@@ -15,17 +14,18 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@flowposltd/ui";
 import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
 import { deleteQuote, getQuote, sendQuote, convertQuoteToOrder, regeneratePaymentLink } from "@/lib/api/quotes";
-import {
-  QUOTE_STATUS_LABEL,
-  QUOTE_STATUS_BADGE_VARIANT,
-  formatMoney,
-  formatDate,
-  formatDateTime,
-} from "@/utils/quote-helpers";
+import { formatMoney, formatDate, formatDateTime } from "@/utils/quote-helpers";
 
 function shareUrl(token: string): string {
   return `${window.location.origin}/q/${token}`;
@@ -125,7 +125,7 @@ export default function QuoteDetailPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1>{quote.quote_number}</h1>
-              <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]}>{QUOTE_STATUS_LABEL[quote.status]}</Badge>
+              <QuoteStatusBadge status={quote.status} />
             </div>
             <p className="caption mt-0.5">Created {formatDateTime(quote.created_at)}</p>
           </div>
@@ -273,43 +273,39 @@ export default function QuoteDetailPage() {
           <CardTitle>Items</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-content-secondary">
-                  <th className="px-4 py-2 font-medium">Item</th>
-                  <th className="px-4 py-2 font-medium text-right">Qty</th>
-                  <th className="px-4 py-2 font-medium text-right">Unit price</th>
-                  <th className="px-4 py-2 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.items.map((item, index) => (
-                  <tr key={item.id ?? index} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2">
-                      <p className="text-foreground">{item.name}</p>
-                      {item.description && <p className="caption">{item.description}</p>}
-                      {item.addons && item.addons.length > 0 && (
-                        <p className="caption">
-                          + {item.addons.map((a) => `${a.name} (${formatMoney(a.price)})`).join(", ")}
-                        </p>
-                      )}
-                      {!!item.tax_amount && item.tax_amount > 0 && (
-                        <p className="caption">
-                          Includes VAT: {formatMoney(item.tax_amount * item.quantity)}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">{item.quantity}</td>
-                    <td className="px-4 py-2 text-right">{formatMoney(item.unit_price)}</td>
-                    <td className="px-4 py-2 text-right">
-                      {formatMoney(item.total ?? item.quantity * item.unit_price)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead className="text-right">Qty</TableHead>
+                <TableHead className="text-right">Unit price</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {quote.items.map((item, index) => (
+                <TableRow key={item.id ?? index}>
+                  <TableCell>
+                    <p className="text-foreground">{item.name}</p>
+                    {item.description && <p className="caption">{item.description}</p>}
+                    {item.addons && item.addons.length > 0 && (
+                      <p className="caption">
+                        + {item.addons.map((a) => `${a.name} (${formatMoney(a.price)})`).join(", ")}
+                      </p>
+                    )}
+                    {!!item.tax_amount && item.tax_amount > 0 && (
+                      <p className="caption">Includes VAT: {formatMoney(item.tax_amount * item.quantity)}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{formatMoney(item.unit_price)}</TableCell>
+                  <TableCell className="text-right">
+                    {formatMoney(item.total ?? item.quantity * item.unit_price)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <Separator />
           <div className="flex flex-col gap-1.5 p-4 text-sm ml-auto max-w-xs">
             <div className="flex justify-between text-content-secondary">
