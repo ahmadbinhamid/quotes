@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppProviders } from "@/components/providers/app-providers";
+import { RequireAuth } from "@/components/routing/RequireAuth";
 import { useEmbed } from "@/app/use-embed";
 import QuotesListPage from "@/pages/quotes/QuotesListPage";
 import QuoteFormPage from "@/pages/quotes/QuoteFormPage";
@@ -21,12 +22,50 @@ export default function App() {
               the dashboard iframe. */}
           <Route path="/q/:token" element={<PublicQuotePage />} />
 
-          {/* Staff-facing, embedded in the tenant dashboard. */}
-          <Route path="/" element={<QuotesListPage />} />
-          <Route path="/quotes/new" element={<QuoteFormPage />} />
-          <Route path="/quotes/:id" element={<QuoteDetailPage />} />
-          <Route path="/quotes/:id/edit" element={<QuoteFormPage />} />
-          <Route path="*" element={<QuotesListPage />} />
+          {/* Staff-facing, embedded in the tenant dashboard — gated behind
+              RequireAuth so an anonymous visitor (e.g. a stripped-down share
+              link) gets a plain "not found" page instead of the dashboard
+              shell. */}
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <QuotesListPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/quotes/new"
+            element={
+              <RequireAuth>
+                <QuoteFormPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/quotes/:id"
+            element={
+              <RequireAuth>
+                <QuoteDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/quotes/:id/edit"
+            element={
+              <RequireAuth>
+                <QuoteFormPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <RequireAuth>
+                <QuotesListPage />
+              </RequireAuth>
+            }
+          />
         </Routes>
       </AppProviders>
       <Toaster richColors position="bottom-right" />

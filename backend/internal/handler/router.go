@@ -13,12 +13,13 @@ import (
 )
 
 // NewRouter builds the Gin engine with all routes registered.
-func NewRouter(installations *service.InstallationService, quotes *service.QuoteService, jwtSecret string, allowDevTokens bool, signingSecret string) *gin.Engine {
+func NewRouter(installations *service.InstallationService, quotes *service.QuoteService, catalog *service.CatalogService, jwtSecret string, allowDevTokens bool, signingSecret string) *gin.Engine {
 	lifecycleHandler := NewLifecycleHandler(installations)
 	meHandler := NewMeHandler(installations)
 	devHandler := NewDevTokenHandler(jwtSecret)
 	quoteHandler := NewQuoteHandler(quotes)
 	publicQuoteHandler := NewPublicQuoteHandler(quotes)
+	catalogHandler := NewCatalogHandler(catalog)
 
 	router := gin.Default()
 	router.GET("/healthz", func(c *gin.Context) {
@@ -60,6 +61,18 @@ func NewRouter(installations *service.InstallationService, quotes *service.Quote
 	q.DELETE("/:id", quoteHandler.Delete)
 	q.POST("/:id/send", quoteHandler.Send)
 	q.POST("/:id/convert", quoteHandler.Convert)
+	q.POST("/:id/payment-link", quoteHandler.RegeneratePaymentLink)
+
+	// Catalog proxy — the quote form's product picker and customer selector
+	// call these instead of the tenant's raw FlowPOS api_key (which never
+	// leaves the backend). See service/catalog.go.
+	catalogGroup := p.Group("/catalog")
+	catalogGroup.GET("/products", catalogHandler.Products)
+	catalogGroup.GET("/products/:slug", catalogHandler.Product)
+	catalogGroup.GET("/categories", catalogHandler.Categories)
+	catalogGroup.GET("/customers", catalogHandler.Customers)
+	catalogGroup.POST("/customers", catalogHandler.CreateCustomer)
+	catalogGroup.GET("/locations", catalogHandler.Locations)
 
 	// Customer-facing share link (/q/:token in the frontend) — no tenant
 	// JWT, secured only by the opaque token. Mounted under /api/public so
@@ -82,6 +95,11 @@ func fail(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case errors.Is(err, apperrors.ErrDuplicate), errors.Is(err, apperrors.ErrConflict):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, apperrors.ErrUpstreamRejected):
+		// FlowPOS itself rejected the call — almost always a permission
+		// this app's api_key doesn't have (not a bug in this service).
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		_ = c.Error(err)
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		_ = c.Error(err)

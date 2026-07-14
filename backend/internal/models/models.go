@@ -53,6 +53,12 @@ type Quote struct {
 	ShareToken string      `gorm:"type:varchar(64);not null;uniqueIndex:uq_quotes_share_token" json:"share_token"`
 	Status     QuoteStatus `gorm:"type:varchar(20);not null;default:'draft'" json:"status"`
 
+	// CustomerID references a real FlowPOS customer when one was picked via
+	// the customer selector; nil for a walk-in/manually-typed customer not
+	// yet in FlowPOS. CustomerName/Email/Phone below are always populated
+	// (typed directly, or snapshotted from the picked customer) — they're
+	// the record of who the quote is for regardless of catalog linkage.
+	CustomerID    *uint64 `json:"customer_id,omitempty"`
 	CustomerName  string `gorm:"type:varchar(255);not null;default:''" json:"customer_name"`
 	CustomerEmail string `gorm:"type:varchar(255);not null;default:''" json:"customer_email"`
 	CustomerPhone string `gorm:"type:varchar(64);not null;default:''" json:"customer_phone"`
@@ -84,6 +90,10 @@ type Quote struct {
 	// OrderID/OrderNumber are populated once ConvertToOrder succeeds.
 	OrderID     string `gorm:"type:varchar(64);not null;default:''" json:"order_id,omitempty"`
 	OrderNumber string `gorm:"type:varchar(64);not null;default:''" json:"order_number,omitempty"`
+	// PaymentLinkURL is cached from the last GeneratePaymentLink call so
+	// staff can re-copy/re-send it without hitting FlowPOS again; refreshed
+	// by the payment-link regenerate endpoint.
+	PaymentLinkURL *string `gorm:"type:varchar(1024)" json:"payment_link_url,omitempty"`
 
 	CreatedByUserID uint64 `json:"created_by_user_id"`
 
@@ -93,17 +103,44 @@ type Quote struct {
 
 func (Quote) TableName() string { return "quotes" }
 
-// QuoteItem is a single freeform line item on a Quote (name/qty/price typed
-// directly by staff — no product catalog integration).
+// QuoteItem is a line item on a Quote. Name/Quantity/UnitPrice are always
+// populated — either typed directly by staff (a custom line with no catalog
+// product) or snapshotted from a picked product/variant at add-time, same as
+// how a FlowPOS order stores its own item snapshot. VariantID is the
+// optional reference back to that catalog variant, used on conversion to
+// send a real catalog line instead of a custom one.
 type QuoteItem struct {
-	ID          uint64  `gorm:"primaryKey" json:"id"`
-	QuoteID     uint64  `gorm:"not null;index:idx_quote_items_quote_id" json:"quote_id"`
-	Name        string  `gorm:"type:varchar(255);not null" json:"name"`
-	Description string  `gorm:"type:varchar(500);not null;default:''" json:"description"`
-	Quantity    float64 `gorm:"not null;default:1" json:"quantity"`
-	UnitPrice   float64 `gorm:"not null;default:0" json:"unit_price"`
-	Total       float64 `gorm:"not null;default:0" json:"total"`
-	SortOrder   int     `gorm:"not null;default:0" json:"sort_order"`
+	ID          uint64           `gorm:"primaryKey" json:"id"`
+	QuoteID     uint64           `gorm:"not null;index:idx_quote_items_quote_id" json:"quote_id"`
+	VariantID   *uint64          `json:"variant_id,omitempty"`
+	Name        string           `gorm:"type:varchar(255);not null" json:"name"`
+	Description string           `gorm:"type:varchar(500);not null;default:''" json:"description"`
+	Quantity    float64          `gorm:"not null;default:1" json:"quantity"`
+	UnitPrice   float64          `gorm:"not null;default:0" json:"unit_price"`
+	// TaxAmount is the per-unit VAT breakdown (not added into Total — for an
+	// exclusive-VAT product UnitPrice already includes the uplift, for an
+	// inclusive one this is just the portion of UnitPrice that is tax). Purely
+	// informational, computed client-side at add-time from the picked
+	// product's vat_rate/is_taxable/is_vat_inclusive; always 0 for a custom
+	// (non-catalog) line.
+	TaxAmount float64 `gorm:"not null;default:0" json:"tax_amount"`
+	// Addons snapshots the add-ons picked for this line at add-time (name +
+	// price, for display before any conversion) — the FlowPOS order-creation
+	// call itself only sends extension_id/quantity and resolves price
+	// server-side, so this is never round-tripped back to FlowPOS as-is.
+	Addons    []QuoteItemAddon `gorm:"serializer:json" json:"addons,omitempty"`
+	Total     float64          `gorm:"not null;default:0" json:"total"`
+	SortOrder int              `gorm:"not null;default:0" json:"sort_order"`
+}
+
+// QuoteItemAddon is a single add-on selected for a QuoteItem — only
+// meaningful when VariantID is set (FlowPOS rejects add-ons on custom,
+// non-catalog lines). ExtensionID is the FlowPOS AddOn id.
+type QuoteItemAddon struct {
+	ExtensionID uint64  `json:"extension_id"`
+	Name        string  `json:"name"`
+	Price       float64 `json:"price"`
+	Quantity    float64 `json:"quantity"`
 }
 
 func (QuoteItem) TableName() string { return "quote_items" }

@@ -2,10 +2,12 @@
 
 FlowPOS installable app for merchant price quotes.
 
-**This is a scaffold, not a finished app.** Quotes business logic (creating,
-editing and sending quotes, line items, pricing, etc.) is not implemented
-yet — only the infrastructure needed to install this app from the FlowPOS
-marketplace and embed it in the tenant dashboard.
+Staff build a priced quote the same way they build an order (real FlowPOS
+products/customers via the picker, not freeform text), send the customer a
+unique link to view it, and the customer accepts or declines. An accepted
+quote is then converted to a real FlowPOS order by staff, who generate a
+payment link to send on for payment. Quotes auto-expire past their
+`expires_at` date and can no longer be accepted/converted once expired.
 
 ## Architecture
 
@@ -43,6 +45,9 @@ Ports are offset from `ai-builder`'s (backend `8082`, frontend `3001`, mysql
 
 ## What's not here yet
 
-- Any quotes domain model beyond the `Installation` lifecycle record.
-- Real `/api/v1` routes beyond `/me`.
 - Tests.
+- Confirmation that `POST /orders/{id}/pay` (payment-link generation) is
+  reachable via an app's API key — only `POST /orders` itself has been
+  confirmed against the real FlowPOS contract so far.
+- Product variant/addon selection in the quote form's product picker
+  (products with variants are added as a single line at the base price).

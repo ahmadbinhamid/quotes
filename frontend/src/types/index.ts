@@ -7,12 +7,26 @@ export type QuoteStatus =
   | "expired"
   | "converted";
 
+export interface QuoteItemAddon {
+  extension_id: number;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 export interface QuoteItem {
   id?: number;
+  variant_id?: number | null;
   name: string;
   description?: string;
   quantity: number;
   unit_price: number;
+  // Per-unit VAT breakdown, computed client-side at add-time from the
+  // picked product's own vat_rate/is_taxable/is_vat_inclusive — never
+  // added into unit_price/total, purely informational. Always 0/absent for
+  // a custom (non-catalog) line.
+  tax_amount?: number;
+  addons?: QuoteItemAddon[];
   total?: number;
   sort_order?: number;
 }
@@ -22,6 +36,7 @@ export interface Quote {
   quote_number: string;
   share_token: string;
   status: QuoteStatus;
+  customer_id?: number | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -46,18 +61,23 @@ export interface Quote {
   converted_at?: string;
   order_id?: string;
   order_number?: string;
+  payment_link_url?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface QuoteItemInput {
+  variant_id?: number | null;
   name: string;
   description: string;
   quantity: number;
   unit_price: number;
+  tax_amount?: number;
+  addons?: QuoteItemAddon[];
 }
 
 export interface QuoteInput {
+  customer_id?: number | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
@@ -69,7 +89,8 @@ export interface QuoteInput {
   country: string;
   items: QuoteItemInput[];
   total_discount: number;
-  total_tax: number;
+  // No total_tax here — it's derived server-side from each item's own
+  // tax_amount, never client-supplied (see backend service/quote.go).
   shipping_charges: number;
   notes: string;
   expires_at: string;

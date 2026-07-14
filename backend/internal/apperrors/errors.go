@@ -15,4 +15,10 @@ var (
 	// ErrConflict is returned when an action doesn't fit the entity's current
 	// state (e.g. editing a quote that has already been sent).
 	ErrConflict = errors.New("conflict")
+	// ErrUpstreamRejected is returned when FlowPOS itself rejects a
+	// server-to-server call (401/403) — typically a permission this app was
+	// never granted, or granted after the tenant's installation was already
+	// created (permissions sync onto the api_key at install time; a later
+	// change needs a reinstall).
+	ErrUpstreamRejected = errors.New("flowpos rejected the request")
 )

@@ -120,6 +120,22 @@ func (h *QuoteHandler) Convert(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"quote": q})
 }
 
+// RegeneratePaymentLink re-requests a payment link for a converted quote's
+// order — used when conversion-time generation failed, or to refresh a
+// stale link before re-sending it to the customer.
+func (h *QuoteHandler) RegeneratePaymentLink(c *gin.Context) {
+	id, ok := quoteIDParam(c)
+	if !ok {
+		return
+	}
+	q, err := h.quotes.GeneratePaymentLink(c.Request.Context(), tenantID(c), id)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"quote": q})
+}
+
 func quoteIDParam(c *gin.Context) (uint64, bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

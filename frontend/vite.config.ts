@@ -29,7 +29,7 @@ export default defineConfig({
     // ngrok tunnels this dev server for local FlowPOS marketplace testing
     // (Install/Uninstall/Webhook/Dashboard component URLs) — Vite's Host
     // header check otherwise blocks requests arriving via that hostname.
-    allowedHosts: ['preamble-childcare-consonant.ngrok-free.dev'],
+    allowedHosts: ['eldest-contest-humbly.ngrok-free.dev'],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

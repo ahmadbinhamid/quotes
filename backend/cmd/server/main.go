@@ -36,6 +36,7 @@ func main() {
 
 	quoteRepo := repository.NewQuoteRepository(db)
 	quoteService := service.NewQuoteService(quoteRepo, installationRepo, flowposClient)
+	catalogService := service.NewCatalogService(installationRepo, flowposClient)
 
 	// JWT auth: the main FlowPOS system signs tokens with JWT_SECRET; this
 	// microservice validates them (claims: tenant_id, user_id, user_email).
@@ -55,7 +56,7 @@ func main() {
 		log.Printf("WARNING: FLOWPOS_SIGNING_SECRET not set — using an insecure dev secret")
 	}
 
-	router := handler.NewRouter(installationService, quoteService, jwtSecret, allowDevTokens, signingSecret)
+	router := handler.NewRouter(installationService, quoteService, catalogService, jwtSecret, allowDevTokens, signingSecret)
 
 	addr := os.Getenv("ADDR")
 	if addr == "" {

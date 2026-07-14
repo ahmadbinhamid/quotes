@@ -45,3 +45,8 @@ export async function convertQuoteToOrder(id: number): Promise<Quote> {
   const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/convert`);
   return data.quote;
 }
+
+export async function regeneratePaymentLink(id: number): Promise<Quote> {
+  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/payment-link`);
+  return data.quote;
+}
