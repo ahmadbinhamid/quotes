@@ -315,8 +315,8 @@ func (c *Client) CreateOrder(ctx context.Context, apiKey string, in CreateOrderI
 }
 
 // GeneratePaymentLink asks FlowPOS for a payment URL for an existing order —
-// POST /orders/{id}/pay. Reachability via X-API-Key not yet confirmed; the
-// response shape is parsed defensively since it isn't confirmed either.
+// POST /orders/{id}/pay, confirmed reachable via X-API-Key (tested against a
+// real order end-to-end). Response shape still parsed defensively.
 func (c *Client) GeneratePaymentLink(ctx context.Context, apiKey string, orderID uint64) (string, error) {
 	var out map[string]any
 	path := fmt.Sprintf("/orders/%d/pay", orderID)

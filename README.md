@@ -46,8 +46,5 @@ Ports are offset from `ai-builder`'s (backend `8082`, frontend `3001`, mysql
 ## What's not here yet
 
 - Tests.
-- Confirmation that `POST /orders/{id}/pay` (payment-link generation) is
-  reachable via an app's API key — only `POST /orders` itself has been
-  confirmed against the real FlowPOS contract so far.
 - Product variant/addon selection in the quote form's product picker
   (products with variants are added as a single line at the base price).
