@@ -4,6 +4,7 @@ import type { Quote, QuoteInput } from "@/types";
 export interface ListQuotesParams {
   status?: string;
   exclude_expired?: boolean;
+  search?: string;
   limit?: number;
   offset?: number;
 }

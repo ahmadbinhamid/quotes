@@ -74,6 +74,8 @@ export interface QuoteItemInput {
   // Client-side display hint only — never read by the backend. Absent for
   // items reloaded from an existing quote (not persisted).
   tax_inclusive?: boolean;
+  // Client-side thumbnail only, same non-persisted caveat as tax_inclusive.
+  image?: string;
   addons?: QuoteItemAddon[];
 }
 

@@ -1,10 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@flowposltd/ui";
-import { DatePicker } from "@/components/ui/date-picker";
+import { Card, CardContent, CardHeader, CardTitle, DatePicker } from "@flowposltd/ui";
 import { FormField } from "@/components/ui/form-field";
 
 interface ExpiryDateStepProps {
   value: string;
   onChange: (value: string) => void;
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function ExpiryDateStep({ value, onChange }: ExpiryDateStepProps) {
@@ -15,7 +18,7 @@ export function ExpiryDateStep({ value, onChange }: ExpiryDateStepProps) {
       </CardHeader>
       <CardContent>
         <FormField label="Expiry date" required hint="The quote can no longer be accepted after this date.">
-          <DatePicker value={value} onChange={onChange} className="w-full" />
+          <DatePicker value={value} onChange={onChange} min={today()} className="w-full" />
         </FormField>
       </CardContent>
     </Card>

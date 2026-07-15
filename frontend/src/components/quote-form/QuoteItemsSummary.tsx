@@ -1,6 +1,5 @@
-import { Button, Card, CardContent, CardFooter, CardHeader, CardTitle, Input, Separator } from "@flowposltd/ui";
-import { Plus, Tag, Trash2 } from "lucide-react";
-import { FormField } from "@/components/ui/form-field";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input } from "@flowposltd/ui";
+import { Minus, Package, Plus, Trash2 } from "lucide-react";
 import type { QuoteItemInput } from "@/types";
 import { formatMoney } from "@/utils/quote-helpers";
 import { itemTax, itemTotal } from "./quote-item-math";
@@ -22,7 +21,6 @@ export function QuoteItemsSummary({
   items,
   onUpdateItem,
   onRemoveItem,
-  onAddCustomLine,
   discount,
   onDiscountChange,
   shipping,
@@ -31,65 +29,78 @@ export function QuoteItemsSummary({
   total,
 }: QuoteItemsSummaryProps) {
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
-        <CardTitle>Order summary</CardTitle>
-        <span className="text-xs text-content-secondary">
+    <Card className="flex flex-col overflow-hidden p-0 lg:h-full">
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border py-3">
+        <CardTitle className="text-base">Order summary</CardTitle>
+        <span className="text-xs text-content-tertiary">
           {items.length} item{items.length === 1 ? "" : "s"}
         </span>
       </CardHeader>
-      <Separator />
-      <CardContent className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 py-4">
-        {items.length === 0 ? (
-          <p className="py-6 text-center text-sm text-content-secondary">
-            No items yet — add a product to get started.
-          </p>
-        ) : (
-          items.map((item, index) => (
-            <QuoteItemRow
-              key={index}
-              item={item}
-              onUpdate={(patch) => onUpdateItem(index, patch)}
-              onRemove={() => onRemoveItem(index)}
-            />
-          ))
-        )}
-        <Button type="button" variant="secondary" size="sm" className="self-start" onClick={onAddCustomLine}>
-          <Plus className="size-4" />
-          Add custom line
-        </Button>
-      </CardContent>
-      <Separator />
-      <CardFooter className="shrink-0 flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <FormField label="Discount">
+
+      {/* Totals — pinned right under the header so they're always visible,
+          with discount/shipping editable inline. */}
+      <div className="flex shrink-0 flex-col gap-1.5 border-b border-border bg-secondary/40 px-4 py-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-content-secondary">Subtotal</span>
+          <span className="font-medium tabular-nums text-foreground">{formatMoney(subtotal)}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-content-secondary">Discount</span>
+          <div className="flex items-center gap-1">
+            <span className="text-content-tertiary">−</span>
             <Input
               type="number"
               min={0}
               step="0.01"
+              size="sm"
+              className="h-7 w-20 px-2 text-right tabular-nums"
               value={discount}
               onChange={(e) => onDiscountChange(Number(e.target.value))}
             />
-          </FormField>
-          <FormField label="Shipping">
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={shipping}
-              onChange={(e) => onShippingChange(Number(e.target.value))}
-            />
-          </FormField>
+          </div>
         </div>
-        <div className="w-full flex items-center justify-between text-sm text-content-secondary">
-          <span>Subtotal</span>
-          <span>{formatMoney(subtotal)}</span>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-content-secondary">Shipping</span>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            size="sm"
+            className="h-7 w-20 px-2 text-right tabular-nums"
+            value={shipping}
+            onChange={(e) => onShippingChange(Number(e.target.value))}
+          />
         </div>
-        <div className="w-full flex items-center justify-between border-t border-border pt-2 text-sm font-semibold text-foreground">
-          <span>Total</span>
-          <span>{formatMoney(total)}</span>
+        <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
+          <span className="text-sm font-semibold text-foreground">Total</span>
+          <span className="text-lg font-semibold tabular-nums text-primary">{formatMoney(total)}</span>
         </div>
-      </CardFooter>
+      </div>
+
+      <div className="shrink-0 px-4 pb-1 pt-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-content-tertiary">Items</p>
+      </div>
+
+      <CardContent className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-0">
+        {items.length === 0 ? (
+          <p className="py-6 text-center text-sm text-content-secondary">No items yet — add a product to get started.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {items.map((item, index) => (
+              <QuoteItemRow
+                key={index}
+                item={item}
+                onUpdate={(patch) => onUpdateItem(index, patch)}
+                onRemove={() => onRemoveItem(index)}
+              />
+            ))}
+          </div>
+        )}
+        {/* <Button type="button" variant="secondary" size="sm" className="mt-3 self-start" onClick={onAddCustomLine}>
+          <Plus className="size-4" />
+          Add custom line
+        </Button> */}
+      </CardContent>
     </Card>
   );
 }
@@ -101,49 +112,80 @@ interface QuoteItemRowProps {
 }
 
 function QuoteItemRow({ item, onUpdate, onRemove }: QuoteItemRowProps) {
+  const isCatalogLine = Boolean(item.variant_id);
+
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border p-2.5">
-      <div className="grid grid-cols-[1fr_70px_auto] gap-2 items-center">
-        <div className="relative">
-          {item.variant_id && (
-            <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-content-secondary" />
+    <div className="flex flex-col gap-1.5 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-secondary">
+          {item.image ? (
+            <img src={item.image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Package className="size-3.5 text-primary" />
           )}
+        </div>
+        {isCatalogLine ? (
+          <p className="min-w-0 flex-1 truncate text-sm font-medium leading-tight text-foreground">{item.name}</p>
+        ) : (
           <Input
-            className={item.variant_id ? "pl-8" : undefined}
+            className="h-8 flex-1 px-2 text-sm"
             placeholder="Item name"
             value={item.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
           />
-        </div>
-        <Input
-          type="number"
-          min={0}
-          step="1"
-          placeholder="Qty"
-          value={item.quantity}
-          onChange={(e) => onUpdate({ quantity: Number(e.target.value) })}
-        />
-        <Button type="button" variant="ghost" size="icon" onClick={onRemove}>
-          <Trash2 className="size-4" />
+        )}
+        <Button type="button" variant="ghost" size="icon" className="size-7 shrink-0" onClick={onRemove}>
+          <Trash2 className="size-3.5" />
         </Button>
       </div>
-      <div className="grid grid-cols-[1fr_70px_auto] gap-2 items-center">
-        <span className="text-xs text-content-secondary">Unit price</span>
-        <Input
-          type="number"
-          min={0}
-          step="0.01"
-          value={item.unit_price}
-          onChange={(e) => onUpdate({ unit_price: Number(e.target.value) })}
-        />
-        <span className="text-xs font-medium text-foreground text-right pr-9">{formatMoney(itemTotal(item))}</span>
-      </div>
+
+      {!isCatalogLine && (
+        <div className="flex items-center gap-1.5 pl-10.5 text-xs text-content-secondary">
+          <span>Unit price</span>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            size="sm"
+            className="h-6 w-20 px-1.5 text-xs"
+            value={item.unit_price}
+            onChange={(e) => onUpdate({ unit_price: Number(e.target.value) })}
+          />
+        </div>
+      )}
       {item.addons && item.addons.length > 0 && (
-        <p className="text-xs text-content-secondary">
+        <p className="pl-10.5 text-xs text-content-secondary">
           + {item.addons.map((a) => `${a.name} (${formatMoney(a.price)})`).join(", ")}
         </p>
       )}
-      {itemTax(item) > 0 && <p className="text-xs text-content-secondary">Includes VAT: {formatMoney(itemTax(item))}</p>}
+      {itemTax(item) > 0 && (
+        <p className="pl-10.5 text-xs text-content-secondary">Includes VAT: {formatMoney(itemTax(item))}</p>
+      )}
+
+      <div className="flex items-center justify-between pl-10.5">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="tertiary"
+            size="icon"
+            className="size-6"
+            onClick={() => onUpdate({ quantity: Math.max(1, Number(item.quantity) - 1) })}
+          >
+            <Minus className="size-3" />
+          </Button>
+          <span className="flex h-6 w-9 items-center justify-center rounded border border-border text-xs">{item.quantity}</span>
+          <Button
+            type="button"
+            variant="tertiary"
+            size="icon"
+            className="size-6"
+            onClick={() => onUpdate({ quantity: Number(item.quantity) + 1 })}
+          >
+            <Plus className="size-3" />
+          </Button>
+        </div>
+        <span className="text-sm font-semibold text-foreground">{formatMoney(itemTotal(item))}</span>
+      </div>
     </div>
   );
 }

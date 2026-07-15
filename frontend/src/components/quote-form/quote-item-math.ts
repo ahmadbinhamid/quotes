@@ -10,10 +10,11 @@ export function itemFromProduct(product: PickedProduct): QuoteItemInput {
     variant_id: product.variantId,
     name: product.name,
     description: "",
-    quantity: 1,
+    quantity: product.quantity,
     unit_price: product.unitPrice,
     tax_amount: product.taxPerUnit,
     tax_inclusive: product.taxInclusive,
+    image: product.image,
     addons: product.addons?.map((a) => ({
       extension_id: a.extensionId,
       name: a.name,

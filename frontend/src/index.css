@@ -102,6 +102,13 @@ body {
   outline: none;
 }
 
+/* ui-kit's Stepper hardcodes its first step to `flex-initial` (ported as-is
+   from tenant-dashboard's stepper), leaving the remaining steps to split the
+   rest unevenly instead of all steps sharing the row equally. */
+.quote-stepper li:first-child {
+  flex: 1 1 0% !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

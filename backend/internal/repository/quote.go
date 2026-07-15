@@ -18,8 +18,10 @@ type QuoteFilter struct {
 	// default ("active") list view, which shows everything except expired
 	// rather than one exact status match. Ignored if Status is also set.
 	ExcludeExpired bool
-	Limit          int
-	Offset         int
+	// Search matches quote_number or customer_name (case-insensitive substring).
+	Search string
+	Limit  int
+	Offset int
 }
 
 type QuoteRepository interface {
@@ -83,6 +85,10 @@ func (r *quoteRepository) List(ctx context.Context, tenantID uint64, filter Quot
 		base = base.Where("status = ?", filter.Status)
 	} else if filter.ExcludeExpired {
 		base = base.Where("status <> ?", models.QuoteStatusExpired)
+	}
+	if filter.Search != "" {
+		like := "%" + filter.Search + "%"
+		base = base.Where("quote_number LIKE ? OR customer_name LIKE ?", like, like)
 	}
 
 	var total int64

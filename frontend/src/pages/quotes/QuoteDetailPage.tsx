@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  buttonVariants,
   Card,
   CardHeader,
   CardTitle,
@@ -127,11 +128,9 @@ export default function QuoteDetailPage() {
     <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
+          <Link to="/" className={buttonVariants({ variant: "ghost", size: "icon" })}>
+            <ArrowLeft className="size-4" />
+          </Link>
           <div>
             <div className="flex items-center gap-2">
               <h1>{quote.quote_number}</h1>
@@ -142,12 +141,10 @@ export default function QuoteDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {canEdit && (
-            <Button variant="secondary" asChild>
-              <Link to={`/quotes/${quote.id}/edit`}>
-                <Pencil className="size-4" />
-                Edit
-              </Link>
-            </Button>
+            <Link to={`/quotes/${quote.id}/edit`} className={buttonVariants({ variant: "secondary" })}>
+              <Pencil className="size-4" />
+              Edit
+            </Link>
           )}
           {canEdit && (
             <Button

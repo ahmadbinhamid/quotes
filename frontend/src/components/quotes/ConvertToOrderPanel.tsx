@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SidePanel,
-  SidePanelBody,
-  SidePanelFooter,
   ToggleButtonGroup,
 } from "@flowposltd/ui";
 import { FormField } from "@/components/ui/form-field";
@@ -79,76 +82,77 @@ export function ConvertToOrderPanel({ open, onOpenChange, onConfirm, submitting 
   }
 
   return (
-    <SidePanel
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Convert to order"
-      description="Choose the location and fulfillment for the order this creates."
-      width="sm:max-w-[440px]"
-    >
-      <SidePanelBody className="flex flex-col gap-4">
-        <FormField label="Location" required>
-          <Select value={locationId} onValueChange={setLocationId} disabled={locationsLoading}>
-            <SelectTrigger>
-              <SelectValue placeholder={locationsLoading ? "Loading locations…" : "Select a location"} />
-            </SelectTrigger>
-            <SelectContent>
-              {locations?.map((loc) => (
-                <SelectItem key={loc.id} value={String(loc.id)}>
-                  {loc.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Convert to order</DialogTitle>
+          <DialogDescription>Choose the location and fulfillment for the order this creates.</DialogDescription>
+        </DialogHeader>
 
-        <FormField label="Fulfillment" required>
-          <ToggleButtonGroup options={FULFILLMENT_OPTIONS} value={fulfillmentType} onChange={setFulfillmentType} />
-        </FormField>
+        <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+          <FormField label="Location" required>
+            <Select value={locationId} onValueChange={setLocationId} disabled={locationsLoading}>
+              <SelectTrigger>
+                <SelectValue placeholder={locationsLoading ? "Loading locations…" : "Select a location"} />
+              </SelectTrigger>
+              <SelectContent>
+                {locations?.map((loc) => (
+                  <SelectItem key={loc.id} value={String(loc.id)}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
 
-        {isDelivery && (
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Address line 1" required className="col-span-2">
-              <Input maxLength={255} value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} />
-            </FormField>
-            <FormField label="Address line 2" className="col-span-2">
-              <Input maxLength={255} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
-            </FormField>
-            <FormField label="City" required>
-              <Input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} />
-            </FormField>
-            <FormField label="State / county">
-              <Input maxLength={120} value={state} onChange={(e) => setState(e.target.value)} />
-            </FormField>
-            <FormField label="Postcode" required>
-              <Input maxLength={32} value={postcode} onChange={(e) => setPostcode(e.target.value)} />
-            </FormField>
-            <FormField label="Country" required>
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          </div>
-        )}
-      </SidePanelBody>
+          <FormField label="Fulfillment" required>
+            <ToggleButtonGroup options={FULFILLMENT_OPTIONS} value={fulfillmentType} onChange={setFulfillmentType} />
+          </FormField>
 
-      <SidePanelFooter className="flex items-center justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button type="button" onClick={handleConfirm} disabled={!canSubmit} loading={submitting}>
-          Convert to order
-        </Button>
-      </SidePanelFooter>
-    </SidePanel>
+          {isDelivery && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Address line 1" required className="col-span-2">
+                <Input maxLength={255} value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} />
+              </FormField>
+              <FormField label="Address line 2" className="col-span-2">
+                <Input maxLength={255} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
+              </FormField>
+              <FormField label="City" required>
+                <Input maxLength={120} value={city} onChange={(e) => setCity(e.target.value)} />
+              </FormField>
+              <FormField label="State / county">
+                <Input maxLength={120} value={state} onChange={(e) => setState(e.target.value)} />
+              </FormField>
+              <FormField label="Postcode" required>
+                <Input maxLength={32} value={postcode} onChange={(e) => setPostcode(e.target.value)} />
+              </FormField>
+              <FormField label="Country" required>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleConfirm} disabled={!canSubmit} loading={submitting}>
+            Convert to order
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

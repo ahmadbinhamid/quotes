@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, AlertDescription, Button, Stepper, type StepperStep } from "@flowposltd/ui";
+import { Alert, AlertDescription, Button, buttonVariants, Stepper, type StepperStep } from "@flowposltd/ui";
 import { ArrowLeft } from "lucide-react";
 import { CustomerStep } from "@/components/quote-form/steps/CustomerStep";
 import { ExpiryDateStep } from "@/components/quote-form/steps/ExpiryDateStep";
@@ -39,6 +39,9 @@ export default function QuoteFormPage() {
   });
 
   const [stepIndex, setStepIndex] = useState(0);
+  // The furthest step reached — lets the Stepper allow clicking back to any
+  // already-visited step without letting the user skip ahead past it.
+  const [maxStepReached, setMaxStepReached] = useState(0);
   const [expiresAt, setExpiresAt] = useState(defaultExpiry());
   const [customer, setCustomer] = useState<QuoteCustomer>({ name: "", email: "", phone: "" });
   const [addressLine1, setAddressLine1] = useState("");
@@ -121,13 +124,14 @@ export default function QuoteFormPage() {
     }
   }, [stepIndex, expiresAt, customer, items]);
 
-  function goBack() {
-    setStepIndex((i) => Math.max(0, i - 1));
+  function goToStep(index: number) {
+    setStepIndex(index);
+    setMaxStepReached((prev) => Math.max(prev, index));
   }
 
   function goNext() {
     if (!canContinue) return;
-    setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
+    goToStep(Math.min(STEPS.length - 1, stepIndex + 1));
   }
 
   // Deliberately not a native <form onSubmit> — that let the browser
@@ -179,9 +183,9 @@ export default function QuoteFormPage() {
             Quote {existing.quote_number} has already been sent and can no longer be edited.
           </AlertDescription>
         </Alert>
-        <Button variant="secondary" className="self-start" asChild>
-          <Link to={`/quotes/${existing.id}`}>Back to quote</Link>
-        </Button>
+        <Link to={`/quotes/${existing.id}`} className={buttonVariants({ variant: "secondary", className: "self-start" })}>
+          Back to quote
+        </Link>
       </div>
     );
   }
@@ -190,17 +194,36 @@ export default function QuoteFormPage() {
 
   return (
     <div className="p-6 flex flex-col gap-5 h-full overflow-hidden">
-      <div className="flex items-center gap-3 shrink-0">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/">
+      <div className="flex items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <Link to="/" className={buttonVariants({ variant: "ghost", size: "icon" })}>
             <ArrowLeft className="size-4" />
           </Link>
-        </Button>
-        <h1>{isEdit ? `Edit ${existing?.quote_number ?? "quote"}` : "New quote"}</h1>
+          <h1>{isEdit ? `Edit ${existing?.quote_number ?? "quote"}` : "New quote"}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link to="/" className={buttonVariants({ variant: "secondary" })}>
+            Cancel
+          </Link>
+          {isLastStep ? (
+            <Button type="button" onClick={submitQuote} loading={saveMutation.isPending}>
+              {isEdit ? "Save changes" : "Create quote"}
+            </Button>
+          ) : (
+            <Button type="button" onClick={goNext} disabled={!canContinue}>
+              Continue
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="shrink-0">
-        <Stepper steps={STEPS} currentStep={stepIndex} />
+      <div className="shrink-0 quote-stepper">
+        <Stepper
+          steps={STEPS}
+          currentStep={stepIndex}
+          onStepClick={goToStep}
+          isStepClickable={(index) => index <= maxStepReached}
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -226,37 +249,19 @@ export default function QuoteFormPage() {
             customer={customer}
             expiresAt={expiresAt}
             items={items}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+            notes={notes}
+            onNotesChange={setNotes}
             subtotal={subtotal}
             totalTax={totalTax}
             discount={discount}
+            onDiscountChange={setDiscount}
             shipping={shipping}
+            onShippingChange={setShipping}
             total={total}
           />
         )}
-      </div>
-
-      <div className="flex items-center justify-between gap-2 shrink-0 pt-2">
-        <div>
-          {stepIndex > 0 && (
-            <Button type="button" variant="tertiary" onClick={goBack}>
-              Back
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" asChild>
-            <Link to="/">Cancel</Link>
-          </Button>
-          {isLastStep ? (
-            <Button type="button" onClick={submitQuote} loading={saveMutation.isPending}>
-              {isEdit ? "Save changes" : "Create quote"}
-            </Button>
-          ) : (
-            <Button type="button" onClick={goNext} disabled={!canContinue}>
-              Continue
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );

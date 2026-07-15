@@ -12,15 +12,15 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
 
 export const QUOTE_STATUS_BADGE_VARIANT: Record<
   QuoteStatus,
-  "status-neutral" | "status-info" | "status-success" | "status-danger" | "status-warning" | "default"
+  "secondary" | "outline" | "status-success" | "status-danger" | "status-info" | "status-warning"
 > = {
-  draft: "status-neutral",
-  sent: "status-info",
-  viewed: "status-info",
-  accepted: "status-success",
-  declined: "status-danger",
+  draft: "secondary", // Neutral, work in progress.
+  sent: "status-info", // Informational — the quotation has been sent.
+  viewed: "outline", // Subtle — the customer has seen it but hasn't acted yet.
+  accepted: "status-success", // Positive outcome, but not yet completed.
+  declined: "status-danger", // Negative outcome.
+  converted: "status-success", // Final successful business outcome.
   expired: "status-warning",
-  converted: "default",
 };
 
 export function formatMoney(value: number | undefined | null): string {

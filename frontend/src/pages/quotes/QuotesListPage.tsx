@@ -1,21 +1,24 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Button, Card, Pagination, PER_PAGE_OPTIONS } from "@flowposltd/ui";
-import { Plus } from "lucide-react";
+import { buttonVariants, Card, Input, Pagination, PER_PAGE_OPTIONS, TableToolbar, TableToolbarFilters } from "@flowposltd/ui";
+import { Plus, Search } from "lucide-react";
 import { listQuotes } from "@/lib/api/quotes";
 import { QuotesEmptyState } from "@/components/quotes/QuotesEmptyState";
 import { QuotesStatusFilter, type QuotesStatusFilterValue } from "@/components/quotes/QuotesStatusFilter";
 import { QuotesTable } from "@/components/quotes/QuotesTable";
 import { QuotesTableSkeleton } from "@/components/quotes/QuotesTableSkeleton";
+import { useDebouncedValue } from "@/utils";
 
 export default function QuotesListPage() {
   const [filter, setFilter] = useState<QuotesStatusFilterValue>("active");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(PER_PAGE_OPTIONS[0]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["quotes", filter, page, itemsPerPage],
+    queryKey: ["quotes", filter, debouncedSearch, page, itemsPerPage],
     queryFn: () =>
       listQuotes({
         limit: itemsPerPage,
@@ -26,6 +29,7 @@ export default function QuotesListPage() {
         // would make `total`/pagination wrong for this view).
         status: filter === "active" ? undefined : filter,
         exclude_expired: filter === "active",
+        search: debouncedSearch || undefined,
       }),
   });
 
@@ -52,19 +56,30 @@ export default function QuotesListPage() {
             Create quotes, share them with customers, and convert accepted ones to orders.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/quotes/new">
-            <Plus className="size-4" />
-            New quote
-          </Link>
-        </Button>
-      </div>
-
-      <div className="shrink-0">
-        <QuotesStatusFilter value={filter} onChange={changeFilter} />
+        <Link to="/quotes/new" className={buttonVariants()}>
+          <Plus className="size-4" />
+          New quote
+        </Link>
       </div>
 
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <TableToolbar className="shrink-0">
+          <TableToolbarFilters>
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-content-tertiary" />
+              <Input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by quote # or customer"
+                className="pl-8"
+              />
+            </div>
+            <QuotesStatusFilter value={filter} onChange={changeFilter} />
+          </TableToolbarFilters>
+        </TableToolbar>
         {isLoading ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <QuotesTableSkeleton rows={itemsPerPage} />

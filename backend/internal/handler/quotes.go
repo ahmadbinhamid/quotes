@@ -39,6 +39,7 @@ func (h *QuoteHandler) List(c *gin.Context) {
 	filter := repository.QuoteFilter{
 		Status:         c.Query("status"),
 		ExcludeExpired: c.Query("exclude_expired") == "true",
+		Search:         c.Query("search"),
 	}
 	if limit, err := strconv.Atoi(c.Query("limit")); err == nil {
 		filter.Limit = limit

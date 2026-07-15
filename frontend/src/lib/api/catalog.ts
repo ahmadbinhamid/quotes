@@ -7,7 +7,9 @@ export interface CatalogProduct {
   name: string;
   slug?: string;
   price: number;
-  image?: string | null;
+  // Confirmed against a real response — there's no flat "image" field, just
+  // this attachments array (empty when the product has no photo).
+  attachments?: { url: string }[];
   has_variants?: boolean;
   variants_count?: number;
   default_variant_id?: number | null;
@@ -16,6 +18,10 @@ export interface CatalogProduct {
   is_taxable?: boolean;
   is_vat_inclusive?: boolean;
   [key: string]: unknown;
+}
+
+export function productImageUrl(product: CatalogProduct): string | undefined {
+  return product.attachments?.[0]?.url;
 }
 
 export interface CatalogAddon {
