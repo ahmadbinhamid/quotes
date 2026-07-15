@@ -94,6 +94,14 @@ body {
   outline-offset: 2px;
 }
 
+/* cmdk's search input (used inside MultiSelect's popover) renders via a
+   Radix Portal, so a scoped Tailwind selector on the wrapper never reaches
+   it — this has to be global. Higher specificity than the rule above wins
+   regardless of source order. */
+[cmdk-input]:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

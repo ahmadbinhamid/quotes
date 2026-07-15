@@ -9,13 +9,13 @@ interface ExpiryDateStepProps {
 
 export function ExpiryDateStep({ value, onChange }: ExpiryDateStepProps) {
   return (
-    <Card>
+    <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle>Choose an expiry date for this quote</CardTitle>
       </CardHeader>
       <CardContent>
         <FormField label="Expiry date" required hint="The quote can no longer be accepted after this date.">
-          <DatePicker value={value} onChange={onChange} className="max-w-xs" />
+          <DatePicker value={value} onChange={onChange} className="w-full" />
         </FormField>
       </CardContent>
     </Card>
