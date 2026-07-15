@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle, Input } from "@flowposltd/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@flowposltd/ui";
+import { DatePicker } from "@/components/ui/date-picker";
 import { FormField } from "@/components/ui/form-field";
 
 interface ExpiryDateStepProps {
@@ -10,17 +11,11 @@ export function ExpiryDateStep({ value, onChange }: ExpiryDateStepProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Expiry date</CardTitle>
+        <CardTitle>Choose an expiry date for this quote</CardTitle>
       </CardHeader>
       <CardContent>
         <FormField label="Expiry date" required hint="The quote can no longer be accepted after this date.">
-          <Input
-            type="date"
-            className="max-w-xs"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            required
-          />
+          <DatePicker value={value} onChange={onChange} className="max-w-xs" />
         </FormField>
       </CardContent>
     </Card>

@@ -22,7 +22,7 @@ const STEPS: StepperStep[] = [
 
 function defaultExpiry(): string {
   const d = new Date();
-  d.setDate(d.getDate() + 14);
+  d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
 
@@ -238,7 +238,7 @@ export default function QuoteFormPage() {
       <div className="flex items-center justify-between gap-2 shrink-0 pt-2">
         <div>
           {stepIndex > 0 && (
-            <Button type="button" variant="ghost" onClick={goBack}>
+            <Button type="button" variant="tertiary" onClick={goBack}>
               Back
             </Button>
           )}
