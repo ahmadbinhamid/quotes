@@ -111,7 +111,11 @@ export default function QuoteFormPage() {
       case 0:
         return Boolean(expiresAt);
       case 1:
-        return Boolean(customer.name?.trim());
+        // Not just name+email typed in — a real FlowPOS customer record,
+        // either picked from search or actually created via "Save as new
+        // FlowPOS customer" below. Otherwise the quote (and any order later
+        // converted from it) references a customer that doesn't exist yet.
+        return Boolean(customer.id);
       case 2:
         return items.some((item) => item.name?.trim().length > 0);
       default:
@@ -136,8 +140,8 @@ export default function QuoteFormPage() {
   // Calling the mutation directly from the button's onClick sidesteps that
   // whole class of bug.
   function submitQuote() {
-    if (!customer.name?.trim()) {
-      toast.error("Pick or enter a customer before saving.");
+    if (!customer.id) {
+      toast.error("Pick an existing customer or save the new one as a FlowPOS customer before saving.");
       return;
     }
     const input: QuoteInput = {

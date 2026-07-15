@@ -20,6 +20,15 @@ interface CustomerSelectorProps {
 
 const EMPTY_CUSTOMER: QuoteCustomer = { name: "", email: "", phone: "" };
 
+// Only checked in JS now — the page deliberately has no native <form>
+// wrapper (see QuoteFormPage), so type="email" alone never actually
+// validates anything; without this, any plain text was accepted as an email.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(email: string): boolean {
+  return EMAIL_PATTERN.test(email.trim());
+}
+
 export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   const [mode, setMode] = useState<"search" | "manual">(value.name ? "manual" : "search");
   const [search, setSearch] = useState("");
@@ -80,6 +89,9 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   }
 
   if (mode === "manual") {
+    const emailTyped = value.email.trim().length > 0;
+    const emailValid = isValidEmail(value.email);
+
     return (
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-4">
@@ -91,12 +103,14 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
               required
             />
           </FormField>
-          <FormField label="Email">
+          <FormField label="Email" required>
             <Input
               type="email"
               maxLength={255}
               value={value.email}
               onChange={(e) => onChange({ ...value, email: e.target.value })}
+              error={emailTyped && !emailValid ? "Enter a valid email address" : undefined}
+              required
             />
           </FormField>
           <FormField label="Phone">
@@ -108,7 +122,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
             <Search className="size-4" />
             Search existing customers instead
           </Button>
-          {value.name?.trim() && value.email?.trim() && (
+          {value.name?.trim() && emailValid && (
             <Button
               type="button"
               variant="secondary"
@@ -121,6 +135,10 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
             </Button>
           )}
         </div>
+        <p className="text-xs text-content-secondary">
+          You must save this as a FlowPOS customer (or pick an existing one) before continuing — typing details alone
+          doesn't create a real customer record.
+        </p>
       </div>
     );
   }

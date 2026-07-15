@@ -54,7 +54,7 @@ export default function QuoteDetailPage() {
     mutationFn: () => sendQuote(quoteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
-      toast.success("Quote sent — share the link with your customer.");
+      toast.success("Link created — share the link with your customer.");
     },
   });
 
@@ -162,7 +162,7 @@ export default function QuoteDetailPage() {
           {canSend && (
             <Button onClick={() => sendMutation.mutate()} loading={sendMutation.isPending}>
               <Send className="size-4" />
-              Send to customer
+              Create shareable link
             </Button>
           )}
           {canConvert && (

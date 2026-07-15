@@ -17,10 +17,42 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/FlowPosLtd/quotes/backend/internal/apperrors"
 )
+
+// extractErrorMessage picks the most useful human-readable message out of a
+// Laravel-style error body: {"message": "...", "errors": {"field": ["msg"]}}.
+// Field-level messages are preferred (more specific — e.g. "The email has
+// already been taken.") over the often-generic top-level message; falls back
+// to the top-level message, then the raw body, if the shape doesn't match.
+func extractErrorMessage(body []byte) string {
+	var payload struct {
+		Message string              `json:"message"`
+		Errors  map[string][]string `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return string(body)
+	}
+	if len(payload.Errors) > 0 {
+		fields := make([]string, 0, len(payload.Errors))
+		for field := range payload.Errors {
+			fields = append(fields, field)
+		}
+		sort.Strings(fields)
+		for _, field := range fields {
+			if len(payload.Errors[field]) > 0 {
+				return payload.Errors[field][0]
+			}
+		}
+	}
+	if payload.Message != "" {
+		return payload.Message
+	}
+	return string(body)
+}
 
 type Client struct {
 	baseURL string
@@ -64,6 +96,15 @@ func (c *Client) do(ctx context.Context, method, path, apiKey string, body any, 
 	}
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return fmt.Errorf("%s %s: %w: %s", method, path, apperrors.ErrUpstreamRejected, respBody)
+	}
+	// FlowPOS (Laravel) returns 422 with {"message": ..., "errors": {"field":
+	// ["msg", ...]}} for validation failures — e.g. "the email has already
+	// been taken". Any other 4xx is also treated as the caller's mistake to
+	// fix, not this app's bug — both map to ErrInvalidInput (400) with the
+	// real message, instead of falling through to a blanket 500 that hides
+	// it entirely.
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		return fmt.Errorf("%s: %w", extractErrorMessage(respBody), apperrors.ErrInvalidInput)
 	}
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("%s %s: unexpected status %d: %s", method, path, resp.StatusCode, respBody)
