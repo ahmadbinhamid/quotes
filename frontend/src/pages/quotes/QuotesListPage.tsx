@@ -58,7 +58,7 @@ export default function QuotesListPage() {
         </div>
         <Link to="/quotes/new" className={buttonVariants()}>
           <Plus className="size-4" />
-          New quote
+          New Quote
         </Link>
       </div>
 

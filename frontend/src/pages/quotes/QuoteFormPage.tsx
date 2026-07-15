@@ -14,10 +14,10 @@ import { toast } from "@/lib/toast";
 import type { QuoteInput, QuoteItemInput } from "@/types";
 
 const STEPS: StepperStep[] = [
-  { label: "Set expiry date" },
-  { label: "Choose customer" },
-  { label: "Add products" },
-  { label: "Review & delivery" },
+  { label: "Set Expiry Date" },
+  { label: "Choose Customer" },
+  { label: "Add Products" },
+  { label: "Review & Share" },
 ];
 
 function defaultExpiry(): string {
@@ -199,7 +199,7 @@ export default function QuoteFormPage() {
           <Link to="/" className={buttonVariants({ variant: "ghost", size: "icon" })}>
             <ArrowLeft className="size-4" />
           </Link>
-          <h1>{isEdit ? `Edit ${existing?.quote_number ?? "quote"}` : "New quote"}</h1>
+          <h1>{isEdit ? `Edit ${existing?.quote_number ?? "Quote"}` : "New Quote"}</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/" className={buttonVariants({ variant: "secondary" })}>
@@ -207,7 +207,7 @@ export default function QuoteFormPage() {
           </Link>
           {isLastStep ? (
             <Button type="button" onClick={submitQuote} loading={saveMutation.isPending}>
-              {isEdit ? "Save changes" : "Create quote"}
+              {isEdit ? "Save Changes" : "Create Quote"}
             </Button>
           ) : (
             <Button type="button" onClick={goNext} disabled={!canContinue}>

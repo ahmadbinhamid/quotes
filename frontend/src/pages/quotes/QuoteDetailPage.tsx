@@ -24,6 +24,7 @@ import {
 } from "@flowposltd/ui";
 import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw } from "lucide-react";
 import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
+import { QuoteDetailSkeleton } from "@/components/quotes/QuoteDetailSkeleton";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
 import {
   deleteQuote,
@@ -116,7 +117,7 @@ export default function QuoteDetailPage() {
   }
 
   if (isLoading || !quote) {
-    return <div className="p-6 text-sm text-content-secondary">Loading…</div>;
+    return <QuoteDetailSkeleton />;
   }
 
   const canEdit = quote.status === "draft";

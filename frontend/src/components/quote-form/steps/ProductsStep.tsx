@@ -36,7 +36,7 @@ export function ProductsStep({
     <div className={`grid gap-4 lg:h-full ${hasItems ? "grid-cols-1 lg:grid-cols-[3fr_2fr]" : "grid-cols-1"}`}>
       <Card className="flex flex-col min-h-0 lg:h-full">
         <CardHeader className="shrink-0">
-          <CardTitle>Add products</CardTitle>
+          <CardTitle>Add Products</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 min-h-0 flex flex-col">
           <ProductPicker onAdd={onAdd} />

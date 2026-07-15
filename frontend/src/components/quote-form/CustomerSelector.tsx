@@ -113,7 +113,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
           className="inline-flex items-center gap-1.5 self-start text-sm text-content-secondary transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back to customer search
+          Back to Customer Search
         </button>
 
         <Card>
@@ -145,7 +145,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
           </Button>
           <Button type="button" onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!canCreate}>
             <UserPlus className="size-4" />
-            Create customer
+            Create Customer
           </Button>
         </div>
       </div>
@@ -160,14 +160,14 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   return (
     <Card className="max-w-2xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Choose customer</CardTitle>
+        <CardTitle>Choose Customer</CardTitle>
         <button
           type="button"
           onClick={() => setMode("manual")}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80"
         >
           <UserPlus className="size-4" />
-          New customer
+          New Customer
         </button>
       </CardHeader>
       <CardContent>

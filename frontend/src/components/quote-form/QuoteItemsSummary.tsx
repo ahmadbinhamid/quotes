@@ -31,7 +31,7 @@ export function QuoteItemsSummary({
   return (
     <Card className="flex flex-col overflow-hidden p-0 lg:h-full">
       <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border py-3">
-        <CardTitle className="text-base">Order summary</CardTitle>
+        <CardTitle className="text-base">Order Summary</CardTitle>
         <span className="text-xs text-content-tertiary">
           {items.length} item{items.length === 1 ? "" : "s"}
         </span>

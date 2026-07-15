@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Badge, Button, Checkbox, Input, Sheet, SheetContent } from "@flowposltd/ui";
+import { Badge, Button, Checkbox, Input, Sheet, SheetContent, Skeleton } from "@flowposltd/ui";
 import { Minus, Package, Plus, Search } from "lucide-react";
 import {
   getProduct,
@@ -166,11 +166,12 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
         />
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border divide-y divide-border">
-        {isFetching && <p className="p-3 text-sm text-content-secondary">Searching…</p>}
+        {isFetching &&
+          Array.from({ length: 4 }).map((_, i) => <ProductRowSkeleton key={i} />)}
         {!isFetching && (products?.length ?? 0) === 0 && (
           <p className="p-3 text-sm text-content-secondary">No products found.</p>
         )}
-        {products?.map((product) => {
+        {!isFetching && products?.map((product) => {
           const image = productImageUrl(product);
           return (
             <div
@@ -327,6 +328,19 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
           )}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function ProductRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 p-2.5">
+      <Skeleton className="size-10 shrink-0 rounded" />
+      <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+      <Skeleton className="h-8 w-16 rounded" />
     </div>
   );
 }

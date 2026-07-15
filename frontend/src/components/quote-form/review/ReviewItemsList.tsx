@@ -17,7 +17,7 @@ export function ReviewItemsList({ items, onUpdateItem, onRemoveItem }: ReviewIte
   return (
     <Card className="flex flex-col overflow-hidden p-0" style={{ maxHeight: "calc(100vh - 260px)" }}>
       <CardHeader className="shrink-0 flex-row items-center justify-between space-y-0 border-b border-border py-3">
-        <CardTitle className="text-sm">Quote items</CardTitle>
+        <CardTitle className="text-sm">Quote Items</CardTitle>
         <span className="text-xs text-content-tertiary">
           {items.length} item{items.length === 1 ? "" : "s"}
         </span>
