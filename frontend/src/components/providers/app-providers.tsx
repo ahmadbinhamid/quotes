@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { TooltipProvider } from "@flowposltd/ui";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong";

@@ -3,7 +3,6 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, AlertDescription, Button, Stepper, type StepperStep } from "@flowposltd/ui";
 import { ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
 import { CustomerStep } from "@/components/quote-form/steps/CustomerStep";
 import { ExpiryDateStep } from "@/components/quote-form/steps/ExpiryDateStep";
 import { ProductsStep } from "@/components/quote-form/steps/ProductsStep";
@@ -11,6 +10,7 @@ import { ReviewStep } from "@/components/quote-form/steps/ReviewStep";
 import { emptyItem, itemFromProduct, itemTax, itemTotal } from "@/components/quote-form/quote-item-math";
 import type { QuoteCustomer } from "@/components/quote-form/CustomerSelector";
 import { createQuote, getQuote, updateQuote } from "@/lib/api/quotes";
+import { toast } from "@/lib/toast";
 import type { QuoteInput, QuoteItemInput } from "@/types";
 
 const STEPS: StepperStep[] = [

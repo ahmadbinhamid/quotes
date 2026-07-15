@@ -8,7 +8,7 @@ import { QUOTE_STATUS_LABEL } from "@/utils/quote-helpers";
 export type QuotesStatusFilterValue = "active" | QuoteStatus;
 
 const FILTER_OPTIONS: { value: QuotesStatusFilterValue; label: string }[] = [
-  { value: "active", label: "Active" },
+  { value: "active", label: "All" },
   { value: "draft", label: QUOTE_STATUS_LABEL.draft },
   { value: "sent", label: QUOTE_STATUS_LABEL.sent },
   { value: "viewed", label: QUOTE_STATUS_LABEL.viewed },

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
+import { Toaster } from "@flowposltd/ui";
 import { AppProviders } from "@/components/providers/app-providers";
 import { RequireAuth } from "@/components/routing/RequireAuth";
 import { useEmbed } from "@/app/use-embed";
@@ -68,7 +68,7 @@ export default function App() {
           />
         </Routes>
       </AppProviders>
-      <Toaster richColors position="bottom-right" />
+      <Toaster />
     </BrowserRouter>
   );
 }

@@ -17,8 +17,8 @@ import {
   TableRow,
 } from "@flowposltd/ui";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { toast } from "sonner";
 import { acceptPublicQuote, declinePublicQuote, getPublicQuote } from "@/lib/api/public-quotes";
+import { toast } from "@/lib/toast";
 import { QUOTE_STATUS_LABEL, QUOTE_STATUS_BADGE_VARIANT, formatMoney, formatDate } from "@/utils/quote-helpers";
 
 export default function PublicQuotePage() {

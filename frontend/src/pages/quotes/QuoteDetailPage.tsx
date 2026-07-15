@@ -22,7 +22,6 @@ import {
   TableRow,
 } from "@flowposltd/ui";
 import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
 import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
 import {
@@ -33,6 +32,7 @@ import {
   regeneratePaymentLink,
   type ConvertQuoteInput,
 } from "@/lib/api/quotes";
+import { toast } from "@/lib/toast";
 import { formatMoney, formatDate, formatDateTime } from "@/utils/quote-helpers";
 
 function shareUrl(token: string): string {
