@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, AlertDescription, Button, buttonVariants, Stepper, type StepperStep } from "@flowposltd/ui";
-import { ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription, BreadcrumbNav, Button, buttonVariants, Stepper, type StepperStep } from "@flowposltd/ui";
 import { CustomerStep } from "@/components/quote-form/steps/CustomerStep";
 import { ExpiryDateStep } from "@/components/quote-form/steps/ExpiryDateStep";
 import { ProductsStep } from "@/components/quote-form/steps/ProductsStep";
@@ -194,13 +193,18 @@ export default function QuoteFormPage() {
 
   return (
     <div className="p-6 flex flex-col gap-5 h-full overflow-hidden">
-      <div className="flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link to="/" className={buttonVariants({ variant: "ghost", size: "icon" })}>
-            <ArrowLeft className="size-4" />
-          </Link>
-          <h1>{isEdit ? `Edit ${existing?.quote_number ?? "Quote"}` : "New Quote"}</h1>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+        <BreadcrumbNav
+          items={[
+            { label: "Quotes", href: "/" },
+            { label: isEdit ? `Edit ${existing?.quote_number ?? "Quote"}` : "New Quote" },
+          ]}
+          renderLink={(item, className) => (
+            <Link to={item.href!} className={className}>
+              {item.label}
+            </Link>
+          )}
+        />
         <div className="flex items-center gap-2">
           <Link to="/" className={buttonVariants({ variant: "secondary" })}>
             Cancel
