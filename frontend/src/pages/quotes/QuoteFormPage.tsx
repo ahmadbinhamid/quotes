@@ -111,10 +111,8 @@ export default function QuoteFormPage() {
       case 0:
         return Boolean(expiresAt);
       case 1:
-        // Not just name+email typed in — a real FlowPOS customer record,
-        // either picked from search or actually created via "Save as new
-        // FlowPOS customer" below. Otherwise the quote (and any order later
-        // converted from it) references a customer that doesn't exist yet.
+        // A real FlowPOS customer record — picked or created — not just
+        // name/email typed in, which wouldn't exist anywhere in FlowPOS.
         return Boolean(customer.id);
       case 2:
         return items.some((item) => item.name?.trim().length > 0);
@@ -132,13 +130,8 @@ export default function QuoteFormPage() {
     setStepIndex((i) => Math.min(STEPS.length - 1, i + 1));
   }
 
-  // Deliberately not a native <form onSubmit> — this is button-driven only.
-  // A native form lets the browser submit on Enter from *any* focused
-  // submittable control (a text input, a Radix Select's hidden native
-  // <select>, etc.), which kept saving the quote before the user meant to,
-  // no matter how narrowly we tried to filter it via a keydown handler.
-  // Calling the mutation directly from the button's onClick sidesteps that
-  // whole class of bug.
+  // Deliberately not a native <form onSubmit> — that let the browser
+  // auto-submit on Enter from any focused input, saving the quote too early.
   function submitQuote() {
     if (!customer.id) {
       toast.error("Pick an existing customer or save the new one as a FlowPOS customer before saving.");

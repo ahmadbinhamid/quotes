@@ -1,12 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 
-/**
- * The backend proxies these straight through as raw JSON from FlowPOS (see
- * backend/internal/service/catalog.go) rather than committing to an exact
- * field-by-field shape server-side — so these types are best-effort based on
- * the tenant dashboard's own product/customer pickers, which hit the same
- * underlying FlowPOS endpoints. Extra/renamed fields are tolerated.
- */
+// The backend proxies these through as raw JSON from FlowPOS — types are
+// best-effort, not committed field-by-field server-side.
 export interface CatalogProduct {
   id: number;
   name: string;
@@ -16,10 +11,7 @@ export interface CatalogProduct {
   has_variants?: boolean;
   variants_count?: number;
   default_variant_id?: number | null;
-  // VAT config — confirmed fields on the real product response. price is
-  // gross (VAT-inclusive) when is_vat_inclusive is true, net (VAT added on
-  // top) when false; not taxable at all when is_taxable is false. See
-  // utils/tax.ts for how these combine with a picked unit price.
+  // See utils/tax.ts for how these combine with a picked unit price.
   vat_rate?: number | null;
   is_taxable?: boolean;
   is_vat_inclusive?: boolean;
@@ -52,11 +44,8 @@ export interface CatalogVariant {
   [key: string]: unknown;
 }
 
-// The product-detail endpoint (GET /catalog/products/:slug) — fetched
-// before adding any product to a quote, mirroring the tenant dashboard's own
-// order flow: a simple product resolves its default_variant and is added
-// directly; a has_variants product's variants are shown for the staff
-// member to pick individually.
+// GET /catalog/products/:slug — a simple product resolves default_variant
+// directly; a has_variants product lists variants to pick from.
 export interface CatalogProductDetail extends CatalogProduct {
   variants?: CatalogVariant[];
   default_variant?: CatalogVariant | null;

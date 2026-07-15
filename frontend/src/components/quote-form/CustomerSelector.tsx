@@ -20,9 +20,8 @@ interface CustomerSelectorProps {
 
 const EMPTY_CUSTOMER: QuoteCustomer = { name: "", email: "", phone: "" };
 
-// Only checked in JS now — the page deliberately has no native <form>
-// wrapper (see QuoteFormPage), so type="email" alone never actually
-// validates anything; without this, any plain text was accepted as an email.
+// Checked in JS since there's no native <form> here for type="email" to
+// validate against (see QuoteFormPage).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidEmail(email: string): boolean {
@@ -52,13 +51,8 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   });
 
   function pick(customer: CatalogCustomer) {
-    // Our types declare name/email as non-nullable, but the real FlowPOS
-    // customer record doesn't guarantee that at runtime — coerce here so
-    // null never enters our controlled state (a null .trim() call downstream
-    // crashes the form). A nameless-but-real customer (email/phone only)
-    // falls back to email, then phone, then a generic label — an empty
-    // name here would otherwise be indistinguishable from "no customer
-    // picked at all" to the required-name check on submit.
+    // FlowPOS doesn't guarantee name/email at runtime despite our types —
+    // fall back to email, then phone, then a generic label.
     const name = customer.name?.trim() || customer.email?.trim() || customer.phone?.trim() || `Customer #${customer.id}`;
     onChange({
       id: customer.id,

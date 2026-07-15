@@ -1,15 +1,9 @@
-// Mirrors FlowPOS's own TaxCalculator::splitInclusive/splitExclusive so a
-// quote's displayed tax matches what the real order ends up computing for
-// the same product (catalog lines' tax is always server-derived from the
-// product's own vat_rate config on conversion — see backend
-// service/quote.go ConvertToOrder).
+// Mirrors FlowPOS's own TaxCalculator so a quote's displayed tax matches what
+// the real order computes (catalog lines' tax is always server-derived).
 export interface ItemTax {
-  // Final per-unit charge — unchanged from basePrice when VAT-inclusive
-  // (tax is just a breakdown within it), uplifted by the VAT amount when
-  // VAT-exclusive (tax is added on top).
+  // Unchanged from basePrice when VAT-inclusive; uplifted when VAT-exclusive.
   unitPrice: number;
-  // Per-unit VAT breakdown, purely informational — never added again on
-  // top of unitPrice by callers.
+  // Informational only — never added again on top of unitPrice by callers.
   taxPerUnit: number;
 }
 

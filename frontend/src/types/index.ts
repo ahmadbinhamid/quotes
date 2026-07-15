@@ -21,10 +21,8 @@ export interface QuoteItem {
   description?: string;
   quantity: number;
   unit_price: number;
-  // Per-unit VAT breakdown, computed client-side at add-time from the
-  // picked product's own vat_rate/is_taxable/is_vat_inclusive — never
-  // added into unit_price/total, purely informational. Always 0/absent for
-  // a custom (non-catalog) line.
+  // Per-unit VAT breakdown, informational only. Always 0/absent for a
+  // custom (non-catalog) line.
   tax_amount?: number;
   addons?: QuoteItemAddon[];
   total?: number;
@@ -73,11 +71,8 @@ export interface QuoteItemInput {
   quantity: number;
   unit_price: number;
   tax_amount?: number;
-  // Client-side-only display hint — whether tax_amount is baked into
-  // unit_price (VAT-inclusive pricing) or added on top of it (VAT-exclusive).
-  // Only known for items just picked in this session (see ProductPicker);
-  // absent for items reloaded from an existing quote, since the backend
-  // doesn't persist this flag. Never read by the backend.
+  // Client-side display hint only — never read by the backend. Absent for
+  // items reloaded from an existing quote (not persisted).
   tax_inclusive?: boolean;
   addons?: QuoteItemAddon[];
 }

@@ -36,19 +36,15 @@ interface ProductPickerProps {
   onAdd: (product: PickedProduct) => void;
 }
 
-// VAT config lives on the product, not the variant — carried alongside the
-// variant/addon stages below so it's available whichever branch eventually
-// adds the item.
+// VAT config lives on the product, not the variant.
 interface TaxInfo {
   vatRate: number | null | undefined;
   isTaxable: boolean | undefined;
   isVatInclusive: boolean | undefined;
 }
 
-// Two-stage picker flow, matching the tenant dashboard's own order flow:
-// pick a variant if the product has more than one, then pick add-ons if the
-// chosen variant has any (add-on groups are attached per-variant, not per
-// product — see CatalogVariant.add_on_groups).
+// Pick a variant if the product has more than one, then pick add-ons if the
+// chosen variant has any.
 type Stage =
   | { kind: "variants"; productName: string; variants: CatalogVariant[]; tax: TaxInfo }
   | { kind: "addons"; productName: string; variant: CatalogVariant; groups: CatalogAddonGroup[]; tax: TaxInfo }
@@ -71,10 +67,8 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
     queryFn: () => listProducts(debouncedSearch || undefined),
   });
 
-  // Always resolved via the detail endpoint before adding — has_variants
-  // is reliable on the list response, but add-on groups are never
-  // eager-loaded there (only on GET /products/:slug), so there's no way to
-  // know about add-ons without this fetch either way.
+  // Always resolved via the detail endpoint first — add-on groups are never
+  // eager-loaded on the list response.
   const resolveMutation = useMutation({
     mutationFn: (product: CatalogProduct) => getProduct(product.slug ?? String(product.id)),
     onSuccess: (detail) => {
@@ -126,9 +120,7 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
     setStage(null);
   }
 
-  // Checkbox-only, quantity fixed at 1 per addon — same simplification the
-  // tenant dashboard's own picker makes, even though FlowPOS's contract
-  // supports a per-addon quantity beyond 1.
+  // Checkbox-only — quantity is fixed at 1 per addon.
   function toggleAddon(id: number, group: CatalogAddonGroup) {
     setSelectedAddonIds((prev) => {
       const next = new Set(prev);

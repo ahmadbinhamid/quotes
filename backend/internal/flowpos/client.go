@@ -1,11 +1,5 @@
-// Package flowpos is a minimal client for calling the core FlowPOS API on a
-// tenant's behalf, authenticated with that tenant's installation api_key.
-//
-// There is no separate "apps API" — an app's X-API-Key is authenticated by
-// the same SetActorMiddleware that resolves the tenant-dashboard's session
-// user, and hits the exact same tenant-module routes/controllers (products,
-// categories, customers, locations, orders), gated by whatever permissions
-// this app was granted on install. Response envelope is always
+// Package flowpos calls the core FlowPOS API on a tenant's behalf, using
+// that tenant's installation api_key. Response envelope is always
 // {"data": {...}, "status": true}.
 package flowpos
 
@@ -23,15 +17,14 @@ import (
 	"github.com/FlowPosLtd/quotes/backend/internal/apperrors"
 )
 
-// extractErrorMessage picks the most useful human-readable message out of a
-// Laravel-style error body: {"message": "...", "errors": {"field": ["msg"]}}.
-// Field-level messages are preferred (more specific — e.g. "The email has
-// already been taken.") over the often-generic top-level message; falls back
-// to the top-level message, then the raw body, if the shape doesn't match.
+// extractErrorMessage pulls the specific field error out of a Laravel-style
+// body ({"message": "...", "errors": {"field": ...}}), since errors[field] is
+// sometimes a string and sometimes an array depending on the endpoint. Falls
+// back to the top-level message, then the raw body.
 func extractErrorMessage(body []byte) string {
 	var payload struct {
-		Message string              `json:"message"`
-		Errors  map[string][]string `json:"errors"`
+		Message string                     `json:"message"`
+		Errors  map[string]json.RawMessage `json:"errors"`
 	}
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return string(body)
@@ -43,8 +36,8 @@ func extractErrorMessage(body []byte) string {
 		}
 		sort.Strings(fields)
 		for _, field := range fields {
-			if len(payload.Errors[field]) > 0 {
-				return payload.Errors[field][0]
+			if msg, ok := firstErrorString(payload.Errors[field]); ok {
+				return msg
 			}
 		}
 	}
@@ -52,6 +45,20 @@ func extractErrorMessage(body []byte) string {
 		return payload.Message
 	}
 	return string(body)
+}
+
+// firstErrorString unwraps a single errors[field] value as either a plain
+// string or an array of strings (first element).
+func firstErrorString(raw json.RawMessage) (string, bool) {
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil && s != "" {
+		return s, true
+	}
+	var list []string
+	if err := json.Unmarshal(raw, &list); err == nil && len(list) > 0 {
+		return list[0], true
+	}
+	return "", false
 }
 
 type Client struct {
@@ -97,12 +104,8 @@ func (c *Client) do(ctx context.Context, method, path, apiKey string, body any, 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return fmt.Errorf("%s %s: %w: %s", method, path, apperrors.ErrUpstreamRejected, respBody)
 	}
-	// FlowPOS (Laravel) returns 422 with {"message": ..., "errors": {"field":
-	// ["msg", ...]}} for validation failures — e.g. "the email has already
-	// been taken". Any other 4xx is also treated as the caller's mistake to
-	// fix, not this app's bug — both map to ErrInvalidInput (400) with the
-	// real message, instead of falling through to a blanket 500 that hides
-	// it entirely.
+	// 4xx = the caller's mistake to fix (validation, duplicate, etc.) — map to
+	// ErrInvalidInput (400) with the real message instead of a blanket 500.
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		return fmt.Errorf("%s: %w", extractErrorMessage(respBody), apperrors.ErrInvalidInput)
 	}
@@ -145,11 +148,9 @@ func (p ListParams) query() string {
 	return "?" + q.Encode()
 }
 
-// ListProducts proxies GET /products (products.view). The inner "products"
-// value (a Laravel paginator) is returned as raw JSON rather than a typed
-// struct — the app only needs to display/search it, not know its exact
-// field-by-field shape, and that shape hasn't been confirmed against a live
-// response yet.
+// ListProducts proxies GET /products (products.view) — a Laravel paginator
+// under the "products" key. Returned as raw JSON since the app only displays
+// it.
 func (c *Client) ListProducts(ctx context.Context, apiKey string, params ListParams) (json.RawMessage, error) {
 	var out struct {
 		Products json.RawMessage `json:"products"`
@@ -160,22 +161,16 @@ func (c *Client) ListProducts(ctx context.Context, apiKey string, params ListPar
 	return out.Products, nil
 }
 
-// GetProduct proxies GET /products/{slug} (products.view) — the detail
-// endpoint the tenant dashboard's own order flow calls to resolve a simple
-// product's default variant, or to list variants for the picker to show
-// when has_variants is true. Passed through as raw JSON for the same reason
-// as ListProducts — the exact shape (in particular where the variant list
-// lives) isn't confirmed against a live response with variants populated
-// yet.
+// GetProduct proxies GET /products/{slug} (products.view) — resolves a
+// simple product's default variant, or lists variants when has_variants is
+// true. Exact shape (esp. where variants live) not yet confirmed live.
 func (c *Client) GetProduct(ctx context.Context, apiKey, slug string) (json.RawMessage, error) {
 	var out json.RawMessage
 	if err := c.do(ctx, http.MethodGet, "/products/"+url.PathEscape(slug), apiKey, nil, &out); err != nil {
 		return nil, fmt.Errorf("get product %s: %w", slug, err)
 	}
-	// Some FlowPOS "show" endpoints nest the resource under a key (e.g.
-	// {"customer": {...}} on customer create); others may return the object
-	// directly. Unwrap a {"product": {...}} envelope if present, otherwise
-	// use the decoded data as-is.
+	// Some FlowPOS "show" endpoints nest the resource under a key; unwrap
+	// {"product": {...}} if present, otherwise use the decoded data as-is.
 	var wrapped struct {
 		Product json.RawMessage `json:"product"`
 	}
@@ -256,10 +251,8 @@ type CreateOrderAddress struct {
 	Country      string `json:"country"`
 }
 
-// CreateOrderAddon matches AddonExtension's live-validation contract: only
-// extension_id and quantity are accepted — price is always resolved
-// server-side from the AddOn record, and addons are only valid against a
-// real catalog variant (never a custom/no-variant_id line).
+// CreateOrderAddon: price is always resolved server-side from extension_id;
+// only valid against a real catalog variant, never a custom line.
 type CreateOrderAddon struct {
 	ExtensionID uint64  `json:"extension_id"`
 	Quantity    float64 `json:"quantity"`
@@ -283,18 +276,14 @@ type CreateOrderItem struct {
 	ExtensionsData *CreateOrderExtensionsData  `json:"extensions_data,omitempty"`
 }
 
-// FlowPOS's numeric "mode" values for StoreOrderRequest — confirmed against
-// the tenant dashboard's own order-creation flow (CreateOrder.tsx), which is
-// the only place this mapping is documented.
+// FlowPOS's numeric "mode" values for StoreOrderRequest (from the tenant
+// dashboard's own order-creation flow).
 const (
 	OrderModeCollection = 3
 	OrderModeDelivery   = 5
 )
 
-// CreateOrderInput matches StoreOrderRequest's real validated shape — see
-// backend README/plan notes for how this differs from what this client used
-// to send (top-level customer_name/email/phone, address.line1/2, items with
-// a "total" field — none of which StoreOrderRequest actually accepts).
+// CreateOrderInput matches StoreOrderRequest's validated shape.
 type CreateOrderInput struct {
 	CustomerID *uint64               `json:"customer_id,omitempty"`
 	Customer   *CreateOrderCustomer  `json:"customer,omitempty"`
@@ -306,9 +295,7 @@ type CreateOrderInput struct {
 	LocationID *uint64               `json:"location_id,omitempty"`
 }
 
-// CreateOrderResult only picks out the two fields the quote-conversion flow
-// needs to store; unknown fields in the real (much larger) Order resource
-// are ignored by json.Unmarshal.
+// CreateOrderResult picks out only the fields the conversion flow needs.
 type CreateOrderResult struct {
 	ID          uint64 `json:"id"`
 	OrderNumber string `json:"order_number"`
@@ -327,12 +314,9 @@ func (c *Client) CreateOrder(ctx context.Context, apiKey string, in CreateOrderI
 	return &out.Order, nil
 }
 
-// GeneratePaymentLink asks FlowPOS for a payment URL for an already-created
-// order — POST /orders/{id}/pay, mirroring the tenant dashboard's own
-// generatePaymentLink. Not directly confirmed reachable via X-API-Key (only
-// POST /orders itself was confirmed) — verify with a live call. The response
-// shape is defensively parsed the same way the dashboard's frontend does,
-// since even that code doesn't commit to one exact key.
+// GeneratePaymentLink asks FlowPOS for a payment URL for an existing order —
+// POST /orders/{id}/pay. Reachability via X-API-Key not yet confirmed; the
+// response shape is parsed defensively since it isn't confirmed either.
 func (c *Client) GeneratePaymentLink(ctx context.Context, apiKey string, orderID uint64) (string, error) {
 	var out map[string]any
 	path := fmt.Sprintf("/orders/%d/pay", orderID)

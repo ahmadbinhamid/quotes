@@ -16,10 +16,8 @@ import (
 	"github.com/FlowPosLtd/quotes/backend/internal/repository"
 )
 
-// QuoteItemAddonInput is an add-on selected for a line item, as submitted by
-// the product picker's addon dialog — snapshotted name/price for display;
-// FlowPOS itself resolves the authoritative price at conversion time from
-// ExtensionID alone (see flowpos.CreateOrderAddon).
+// QuoteItemAddonInput is an add-on picked for a line item — snapshotted for
+// display; FlowPOS re-resolves the real price from ExtensionID at conversion.
 type QuoteItemAddonInput struct {
 	ExtensionID uint64  `json:"extension_id" binding:"required"`
 	Name        string  `json:"name" binding:"required"`
@@ -27,30 +25,21 @@ type QuoteItemAddonInput struct {
 	Quantity    float64 `json:"quantity" binding:"required,gt=0"`
 }
 
-// QuoteItemInput is a line item as submitted by the quote form: either a
-// custom line (no VariantID, name/price typed directly, no addons — FlowPOS
-// rejects addons on non-catalog lines) or a catalog line picked via the
-// product picker (VariantID set, name/price snapshotted from the picked
-// product/variant at add-time, optionally with addons).
+// QuoteItemInput is a line item: either a custom line (no VariantID, no
+// addons) or a catalog line picked via the product picker.
 type QuoteItemInput struct {
 	VariantID   *uint64               `json:"variant_id"`
 	Name        string                `json:"name" binding:"required,max=255"`
 	Description string                `json:"description" binding:"max=500"`
 	Quantity    float64               `json:"quantity" binding:"required,gt=0"`
 	UnitPrice   float64               `json:"unit_price" binding:"gte=0"`
-	// TaxAmount is the per-unit VAT breakdown, computed client-side from the
-	// picked product's own vat_rate/is_taxable/is_vat_inclusive — see
-	// models.QuoteItem.TaxAmount. Purely informational; never added into
-	// Total (an exclusive-VAT product's UnitPrice already reflects the
-	// uplift). Always 0 for a custom line.
+	// TaxAmount is a per-unit VAT breakdown, informational only — never added
+	// into Total. Always 0 for a custom line.
 	TaxAmount float64               `json:"tax_amount" binding:"gte=0"`
 	Addons    []QuoteItemAddonInput `json:"addons"`
 }
 
-// QuoteInput is the create/update payload. CustomerID is set when the
-// customer selector picked a real FlowPOS customer; the name/email/phone/
-// address fields are always populated (typed directly, or snapshotted from
-// the picked customer) and remain the record of who the quote is for.
+// QuoteInput is the create/update payload.
 type QuoteInput struct {
 	CustomerID      *uint64          `json:"customer_id"`
 	CustomerName    string           `json:"customer_name" binding:"required,max=255"`
@@ -64,10 +53,6 @@ type QuoteInput struct {
 	Country         string           `json:"country" binding:"max=120"`
 	Items           []QuoteItemInput `json:"items" binding:"required,min=1"`
 	TotalDiscount   float64          `json:"total_discount" binding:"gte=0"`
-	// TotalTax is not client-supplied — it's derived server-side in
-	// priceItems() from each item's own TaxAmount and stored purely for
-	// display (see QuoteItemInput.TaxAmount for why it's never added into
-	// Total).
 	ShippingCharges float64 `json:"shipping_charges" binding:"gte=0"`
 	Notes           string           `json:"notes"`
 	ExpiresAt       time.Time        `json:"expires_at"`
@@ -95,10 +80,8 @@ func roundMoney(v float64) float64 {
 	return math.Round(v*100) / 100
 }
 
-// itemAddonsTotal sums an item's addon cost — each addon's price × its own
-// quantity, added once per line (not multiplied by the parent item's
-// quantity), matching how FlowPOS attaches a flat addons list to a line
-// rather than per-unit.
+// itemAddonsTotal sums addon price × quantity, added once per line (not
+// multiplied by the parent item's own quantity).
 func itemAddonsTotal(addons []QuoteItemAddonInput) float64 {
 	var total float64
 	for _, a := range addons {
@@ -107,11 +90,8 @@ func itemAddonsTotal(addons []QuoteItemAddonInput) float64 {
 	return total
 }
 
-// priceItems prices each line and returns the built items alongside the
-// quote's subtotal and total tax. Tax is never folded into subtotal/total —
-// UnitPrice already reflects an exclusive-VAT product's uplift (computed
-// client-side at add-time), so TaxAmount is purely an informational
-// breakdown, summed here only for display on the quote.
+// priceItems prices each line, returning the built items plus subtotal and
+// total tax. Tax is never folded into subtotal/total — purely informational.
 func priceItems(in []QuoteItemInput) ([]models.QuoteItem, float64, float64) {
 	items := make([]models.QuoteItem, len(in))
 	var subtotal, totalTax float64
@@ -351,18 +331,8 @@ func (s *QuoteService) Decline(ctx context.Context, token string) (*models.Quote
 	return q, nil
 }
 
-// ConvertToOrder turns an accepted quote into a real FlowPOS order via the
-// tenant's stored api_key (POST /orders — see internal/flowpos/client.go).
-//
-// The real order contract has no order-level discount/shipping amount, only
-// per-item discount_amount — so TotalDiscount is distributed proportionally
-// across items by value, and ShippingCharges (if any) is sent as an extra
-// custom line item named "Shipping". This is a pragmatic mapping, not a
-// confirmed business rule — worth checking against how the resulting order
-// actually looks once this runs against a real tenant.
 // DeliveryAddressInput is the address collected at conversion time when
-// FulfillmentType is "delivery" — a fresh admin-provided input, not the
-// quote's own (billing) address snapshot.
+// FulfillmentType is "delivery" — not the quote's own address snapshot.
 type DeliveryAddressInput struct {
 	AddressLine1 string
 	AddressLine2 string
@@ -401,6 +371,10 @@ func (in ConvertInput) validate() error {
 	}
 }
 
+// ConvertToOrder turns an accepted quote into a real FlowPOS order. There's
+// no order-level discount/shipping, only per-item — TotalDiscount is
+// distributed proportionally by line value, ShippingCharges becomes an extra
+// "Shipping" line item.
 func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, in ConvertInput) (*models.Quote, error) {
 	if err := in.validate(); err != nil {
 		return nil, err
@@ -427,9 +401,7 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, 
 		item := flowpos.CreateOrderItem{Quantity: it.Quantity, DiscountAmount: discount}
 		if it.VariantID != nil {
 			item.VariantID = it.VariantID
-			// Addons are only valid against a real catalog variant — FlowPOS
-			// rejects them outright on custom lines. Only extension_id and
-			// quantity are sent; price is always resolved server-side.
+			// FlowPOS rejects addons on custom lines; only valid on a variant.
 			if len(it.Addons) > 0 {
 				addons := make([]flowpos.CreateOrderAddon, len(it.Addons))
 				for k, a := range it.Addons {
@@ -437,19 +409,12 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, 
 				}
 				item.ExtensionsData = &flowpos.CreateOrderExtensionsData{Addons: addons}
 			}
-			// Note: tax_amount is deliberately not sent for catalog lines —
-			// FlowPOS recomputes it server-side from the product/variant's
-			// own vat_rate/is_taxable/is_vat_inclusive and ignores whatever a
-			// client sends here (confirmed against ItemService::
-			// updateOrCreateItem). Only custom lines below honor it.
+			// tax_amount deliberately not sent for catalog lines — FlowPOS
+			// recomputes it server-side from the product's own vat config.
 		} else {
 			price := it.UnitPrice
 			item.Name = it.Name
 			item.Price = &price
-			// A custom line's own TaxAmount is the real per-unit figure now
-			// (always 0 in practice, since only catalog lines get a
-			// vat_rate-derived tax at add-time) — no need to redistribute an
-			// aggregate anymore.
 			item.TaxAmount = roundMoney(it.Quantity * it.TaxAmount)
 		}
 		items = append(items, item)
@@ -470,11 +435,8 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, 
 		Mode:       mode,
 		LocationID: &locationID,
 	}
-	// Always send the nested customer object (snapshotted on the quote
-	// regardless of whether it came from a picked catalog customer or manual
-	// entry) in addition to customer_id when we have one — OrderController
-	// reads the order's display name/email/phone from this ad-hoc object
-	// alone, it does not backfill them from the customer_id relation.
+	// OrderController reads name/email/phone from this nested object alone —
+	// it does not backfill them from the customer_id relation.
 	if q.CustomerID != nil {
 		orderInput.CustomerID = q.CustomerID
 	}
@@ -483,8 +445,6 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, 
 		phone = &q.CustomerPhone
 	}
 	orderInput.Customer = &flowpos.CreateOrderCustomer{Name: q.CustomerName, Email: q.CustomerEmail, Phone: phone}
-	// The delivery address is the one picked at conversion time, not the
-	// quote's own (billing) address snapshot — collection orders send none.
 	if in.FulfillmentType == "delivery" {
 		a := in.DeliveryAddress
 		orderInput.Address = &flowpos.CreateOrderAddress{
@@ -503,9 +463,8 @@ func (s *QuoteService) ConvertToOrder(ctx context.Context, tenantID, id uint64, 
 		"status": models.QuoteStatusConverted, "converted_at": now,
 		"order_id": fmt.Sprintf("%d", result.ID), "order_number": result.OrderNumber,
 	}
-	// Order creation succeeded — that's the part that matters. A failed
-	// payment link is retryable via the regenerate endpoint, so it shouldn't
-	// fail the whole conversion.
+	// A failed payment link is retryable via the regenerate endpoint — it
+	// shouldn't fail the whole conversion now that the order itself exists.
 	if link, err := s.flowpos.GeneratePaymentLink(ctx, installation.APIKey, result.ID); err != nil {
 		log.Printf("quote %s: generate payment link for order %d: %v", q.QuoteNumber, result.ID, err)
 	} else {
