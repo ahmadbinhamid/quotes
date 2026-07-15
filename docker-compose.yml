@@ -56,6 +56,11 @@ services:
       # there, the same way they do for local (non-Docker) dev.
       additional_contexts:
         - ui-kit=../ui-kit
+      args:
+        # Origins allowed to complete the apps-sdk postMessage handshake
+        # (theme sync, etc.) when this app is embedded in tenant-dashboard —
+        # see src/app/use-embed.ts.
+        VITE_FLOWPOS_DASHBOARD_ORIGINS: ${VITE_FLOWPOS_DASHBOARD_ORIGINS:-https://app.flowpos.dev}
     ports:
       # Host port 3001 (not 3000) — ai-builder's frontend maps 3000:80.
       - "${FRONTEND_HOST_PORT:-3001}:80"
