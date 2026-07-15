@@ -50,6 +50,7 @@ export default function QuoteDetailPage() {
   const { data: quote, isLoading } = useQuery({
     queryKey: ["quotes", id],
     queryFn: () => getQuote(quoteId),
+    refetchOnWindowFocus: "always",
   });
 
   const sendMutation = useMutation({
