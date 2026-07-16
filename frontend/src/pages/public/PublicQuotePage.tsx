@@ -19,7 +19,13 @@ import {
 import { CheckCircle2, XCircle } from "lucide-react";
 import { acceptPublicQuote, declinePublicQuote, getPublicQuote } from "@/lib/api/public-quotes";
 import { toast } from "@/lib/toast";
-import { QUOTE_STATUS_LABEL, QUOTE_STATUS_BADGE_VARIANT, formatMoney, formatDate } from "@/utils/quote-helpers";
+import {
+  QUOTE_STATUS_LABEL,
+  QUOTE_STATUS_BADGE_CLASSNAME,
+  QUOTE_STATUS_BADGE_VARIANT,
+  formatMoney,
+  formatDate,
+} from "@/utils/quote-helpers";
 
 export default function PublicQuotePage() {
   const { token } = useParams<{ token: string }>();
@@ -85,7 +91,9 @@ export default function PublicQuotePage() {
             <h1>Quote {quote.quote_number}</h1>
             <p className="lead mt-0.5">From your service provider</p>
           </div>
-          <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]}>{QUOTE_STATUS_LABEL[quote.status]}</Badge>
+          <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]} className={QUOTE_STATUS_BADGE_CLASSNAME[quote.status]}>
+            {QUOTE_STATUS_LABEL[quote.status]}
+          </Badge>
         </div>
 
         {quote.status === "accepted" && (

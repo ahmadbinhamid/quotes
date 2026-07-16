@@ -22,6 +22,9 @@ export const QUOTE_STATUS_BADGE_VARIANT: Record<
   converted: "status-success", // Final successful business outcome.
   expired: "status-warning",
 };
+export const QUOTE_STATUS_BADGE_CLASSNAME: Partial<Record<QuoteStatus, string>> = {
+  accepted: "border-transparent bg-orange-100 !text-orange-700 dark:bg-orange-900/30 dark:!text-orange-400",
+};
 
 export function formatMoney(value: number | undefined | null): string {
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "GBP" }).format(value ?? 0);
