@@ -77,6 +77,12 @@ type Quote struct {
 
 	Notes string `gorm:"type:text" json:"notes"`
 
+	// PreExpiryStatus is a snapshot of Status taken the moment a quote lapses
+	// into expired (see service.QuoteService.expireIfNeeded) — the only way
+	// Reopen can restore a quote to what it actually was (sent/viewed/
+	// accepted) instead of guessing.
+	PreExpiryStatus QuoteStatus `gorm:"type:varchar(20);not null;default:''" json:"-"`
+
 	ExpiresAt   time.Time  `gorm:"not null" json:"expires_at"`
 	SentAt      *time.Time `json:"sent_at,omitempty"`
 	ViewedAt    *time.Time `json:"viewed_at,omitempty"`

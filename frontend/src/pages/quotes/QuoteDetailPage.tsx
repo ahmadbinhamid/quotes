@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardContent,
   Separator,
+  DatePicker,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -22,16 +23,18 @@ import {
   TableHeader,
   TableRow,
 } from "@flowposltd/ui";
-import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw, RotateCcw } from "lucide-react";
 import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
 import { QuoteDetailSkeleton } from "@/components/quotes/QuoteDetailSkeleton";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
+import { FormField } from "@/components/ui/form-field";
 import {
   deleteQuote,
   getQuote,
   sendQuote,
   convertQuoteToOrder,
   regeneratePaymentLink,
+  reopenQuote,
   type ConvertQuoteInput,
 } from "@/lib/api/quotes";
 import { toast } from "@/lib/toast";
@@ -39,6 +42,16 @@ import { formatMoney, formatDate, formatDateTime } from "@/utils/quote-helpers";
 
 function shareUrl(token: string): string {
   return `${window.location.origin}/q/${token}`;
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function defaultReopenExpiry(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().slice(0, 10);
 }
 
 export default function QuoteDetailPage() {
@@ -70,6 +83,15 @@ export default function QuoteDetailPage() {
     },
   });
 
+  const reopenMutation = useMutation({
+    mutationFn: () => reopenQuote(quoteId, new Date(`${reopenExpiresAt}T23:59:59`).toISOString()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast.success("Quote reopened");
+      setReopenDialogOpen(false);
+    },
+  });
+
   const paymentLinkMutation = useMutation({
     mutationFn: () => regeneratePaymentLink(quoteId),
     onSuccess: () => {
@@ -97,6 +119,8 @@ export default function QuoteDetailPage() {
   const [paymentLinkCopied, setPaymentLinkCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [reopenExpiresAt, setReopenExpiresAt] = useState(defaultReopenExpiry());
 
   async function copyShareLink() {
     if (!quote) return;
@@ -125,6 +149,7 @@ export default function QuoteDetailPage() {
   const canSend = quote.status === "draft";
   const canShare = quote.status !== "draft";
   const canConvert = quote.status === "accepted";
+  const canReopen = quote.status === "expired";
 
   return (
     <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
@@ -170,6 +195,12 @@ export default function QuoteDetailPage() {
             <Button onClick={() => setConvertDialogOpen(true)}>
               <CheckCircle2 className="size-4" />
               Convert to order
+            </Button>
+          )}
+          {canReopen && (
+            <Button onClick={() => setReopenDialogOpen(true)}>
+              <RotateCcw className="size-4" />
+              Reopen
             </Button>
           )}
         </div>
@@ -243,7 +274,8 @@ export default function QuoteDetailPage() {
       {quote.status === "expired" && (
         <Card>
           <CardContent className="py-4 text-sm text-content-secondary">
-            This quote expired on {formatDate(quote.expires_at)} without a response.
+            This quote expired on {formatDate(quote.expires_at)} without a response. Reopen it with a new expiry
+            date to pick up where it left off.
           </CardContent>
         </Card>
       )}
@@ -389,6 +421,30 @@ export default function QuoteDetailPage() {
         onConfirm={(input) => convertMutation.mutate(input)}
         submitting={convertMutation.isPending}
       />
+
+      <Dialog open={reopenDialogOpen} onOpenChange={setReopenDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reopen this quote?</DialogTitle>
+            <DialogDescription>
+              {quote.quote_number} will go back to its status from before it expired, with the new expiry date
+              below.
+            </DialogDescription>
+          </DialogHeader>
+          <FormField label="New expiry date" required>
+            <DatePicker value={reopenExpiresAt} onChange={setReopenExpiresAt} min={today()} className="w-full" />
+          </FormField>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setReopenDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => reopenMutation.mutate()} loading={reopenMutation.isPending}>
+              <RotateCcw className="size-4" />
+              Reopen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -266,11 +266,43 @@ func expirable(status models.QuoteStatus) bool {
 // background job; expiry is just checked on every read/mutation that cares.
 func (s *QuoteService) expireIfNeeded(ctx context.Context, q *models.Quote) {
 	if expirable(q.Status) && time.Now().After(q.ExpiresAt) {
+		preStatus := q.Status
 		q.Status = models.QuoteStatusExpired
-		if err := s.quotes.UpdateStatusFields(ctx, q.ID, map[string]any{"status": models.QuoteStatusExpired}); err != nil {
+		q.PreExpiryStatus = preStatus
+		fields := map[string]any{"status": models.QuoteStatusExpired, "pre_expiry_status": preStatus}
+		if err := s.quotes.UpdateStatusFields(ctx, q.ID, fields); err != nil {
 			log.Printf("quote %d: mark expired: %v", q.ID, err)
 		}
 	}
+}
+
+// Reopen brings an expired quote back to whatever state it was actually in
+// right before it lapsed (sent/viewed/accepted, from PreExpiryStatus) with a
+// new, future expiry date. Only expired quotes can be reopened — there's
+// nothing to restore otherwise.
+func (s *QuoteService) Reopen(ctx context.Context, tenantID, id uint64, newExpiresAt time.Time) (*models.Quote, error) {
+	q, err := s.quotes.GetByID(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	if q.Status != models.QuoteStatusExpired {
+		return nil, fmt.Errorf("quote %s: only expired quotes can be reopened: %w", q.QuoteNumber, apperrors.ErrConflict)
+	}
+	if !newExpiresAt.After(time.Now()) {
+		return nil, fmt.Errorf("expires_at must be in the future: %w", apperrors.ErrInvalidInput)
+	}
+	restoredStatus := q.PreExpiryStatus
+	// Defensive default for rows created before PreExpiryStatus existed.
+	if restoredStatus == "" {
+		restoredStatus = models.QuoteStatusSent
+	}
+	fields := map[string]any{
+		"status": restoredStatus, "expires_at": newExpiresAt, "pre_expiry_status": "",
+	}
+	if err := s.quotes.UpdateFields(ctx, tenantID, id, fields); err != nil {
+		return nil, err
+	}
+	return s.quotes.GetByID(ctx, tenantID, id)
 }
 
 // GetPublic resolves the customer-facing share link. A draft quote (never

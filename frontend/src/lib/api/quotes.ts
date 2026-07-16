@@ -43,6 +43,13 @@ export async function sendQuote(id: number): Promise<Quote> {
   return data.quote;
 }
 
+// Only valid on an expired quote — restores whatever state it was actually
+// in before it lapsed (sent/viewed/accepted), with this new expiry date.
+export async function reopenQuote(id: number, expiresAt: string): Promise<Quote> {
+  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/reopen`, { expires_at: expiresAt });
+  return data.quote;
+}
+
 export type FulfillmentType = "collection" | "delivery";
 
 export interface ConvertQuoteInput {

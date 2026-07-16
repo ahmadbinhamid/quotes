@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -104,6 +105,26 @@ func (h *QuoteHandler) Send(c *gin.Context) {
 		return
 	}
 	q, err := h.quotes.Send(c.Request.Context(), tenantID(c), id)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"quote": q})
+}
+
+func (h *QuoteHandler) Reopen(c *gin.Context) {
+	id, ok := quoteIDParam(c)
+	if !ok {
+		return
+	}
+	var in struct {
+		ExpiresAt time.Time `json:"expires_at" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	q, err := h.quotes.Reopen(c.Request.Context(), tenantID(c), id, in.ExpiresAt)
 	if err != nil {
 		fail(c, err)
 		return
