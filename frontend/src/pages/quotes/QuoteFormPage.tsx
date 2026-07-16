@@ -133,8 +133,13 @@ export default function QuoteFormPage() {
     goToStep(Math.min(STEPS.length - 1, stepIndex + 1));
   }
 
-  // Deliberately not a native <form onSubmit> — that let the browser
-  // auto-submit on Enter from any focused input, saving the quote too early.
+  function handleCustomerChange(next: QuoteCustomer) {
+    setCustomer(next);
+    if (next.id && !customer.id) {
+      goToStep(2);
+    }
+  }
+
   function submitQuote() {
     if (!customer.id) {
       toast.error("Pick an existing customer or save the new one as a FlowPOS customer before saving.");
@@ -232,7 +237,7 @@ export default function QuoteFormPage() {
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {stepIndex === 0 && <ExpiryDateStep value={expiresAt} onChange={setExpiresAt} />}
-        {stepIndex === 1 && <CustomerStep value={customer} onChange={setCustomer} />}
+        {stepIndex === 1 && <CustomerStep value={customer} onChange={handleCustomerChange} />}
         {stepIndex === 2 && (
           <ProductsStep
             items={items}

@@ -138,7 +138,9 @@ export default function QuoteDetailPage() {
               <h1>{quote.quote_number}</h1>
               <QuoteStatusBadge status={quote.status} />
             </div>
-            <p className="caption mt-0.5">Created {formatDateTime(quote.created_at)}</p>
+            <p className="caption mt-0.5">
+              Created {formatDateTime(quote.created_at)} · Order {quote.order_number || quote.order_id || "N/A"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -273,6 +275,7 @@ export default function QuoteDetailPage() {
             {quote.sent_at && <p>Sent {formatDateTime(quote.sent_at)}</p>}
             {quote.viewed_at && <p>Viewed {formatDateTime(quote.viewed_at)}</p>}
             {quote.accepted_at && <p>Accepted {formatDateTime(quote.accepted_at)}</p>}
+            <p>Order {quote.order_number || quote.order_id || "N/A"}</p>
           </CardContent>
         </Card>
       </div>

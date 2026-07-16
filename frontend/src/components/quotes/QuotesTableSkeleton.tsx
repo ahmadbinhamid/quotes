@@ -13,6 +13,7 @@ export function QuotesTableSkeleton({ rows = 10 }: QuotesTableSkeletonProps) {
           <TableHead>Customer</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Total</TableHead>
+          <TableHead>Order</TableHead>
           <TableHead>Expires at</TableHead>
         </TableRow>
       </TableHeader>
@@ -27,6 +28,9 @@ export function QuotesTableSkeleton({ rows = 10 }: QuotesTableSkeletonProps) {
             </TableCell>
             <TableCell>
               <Skeleton className="h-6 w-20 rounded-full" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-16" />
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-16" />

@@ -17,6 +17,7 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
           <TableHead>Customer</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Total</TableHead>
+          <TableHead>Order</TableHead>
           <TableHead>Expires at</TableHead>
         </TableRow>
       </TableHeader>
@@ -42,6 +43,7 @@ function QuotesTableRow({ quote }: { quote: Quote }) {
         <QuoteStatusBadge status={quote.status} />
       </TableCell>
       <TableCell>{formatMoney(quote.total)}</TableCell>
+      <TableCell>{quote.order_number || quote.order_id || "N/A"}</TableCell>
       <TableCell>{formatDate(quote.expires_at)}</TableCell>
     </TableRow>
   );

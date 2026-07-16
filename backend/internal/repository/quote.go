@@ -18,7 +18,6 @@ type QuoteFilter struct {
 	// default ("active") list view, which shows everything except expired
 	// rather than one exact status match. Ignored if Status is also set.
 	ExcludeExpired bool
-	// Search matches quote_number or customer_name (case-insensitive substring).
 	Search string
 	Limit  int
 	Offset int
@@ -88,7 +87,10 @@ func (r *quoteRepository) List(ctx context.Context, tenantID uint64, filter Quot
 	}
 	if filter.Search != "" {
 		like := "%" + filter.Search + "%"
-		base = base.Where("quote_number LIKE ? OR customer_name LIKE ?", like, like)
+		base = base.Where(
+			"quote_number LIKE ? OR customer_name LIKE ? OR order_number LIKE ? OR order_id LIKE ?",
+			like, like, like, like,
+		)
 	}
 
 	var total int64

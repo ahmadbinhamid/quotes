@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, MultiSelect, PhoneInput } from "@flowposltd/ui";
 import { ArrowLeft, UserPlus, X } from "lucide-react";
@@ -38,6 +38,12 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
   const [lastName, setLastName] = useState(() => value.name.split(" ").slice(1).join(" "));
   const [manualEmail, setManualEmail] = useState(value.email);
   const [manualPhone, setManualPhone] = useState(value.phone);
+
+  const selectContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (mode !== "search" || value.id) return;
+    selectContainerRef.current?.querySelector<HTMLButtonElement>('button[role="combobox"]')?.click();
+  }, []);
 
   const { data: customers, isFetching } = useQuery({
     queryKey: ["catalog", "customers", debouncedSearch],
@@ -170,7 +176,7 @@ export function CustomerSelector({ value, onChange }: CustomerSelectorProps) {
           New Customer
         </button>
       </CardHeader>
-      <CardContent>
+      <CardContent ref={selectContainerRef}>
         <MultiSelect
           options={options}
           selectedValues={[]}
