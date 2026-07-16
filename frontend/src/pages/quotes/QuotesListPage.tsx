@@ -73,7 +73,7 @@ export default function QuotesListPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by quote # or customer"
+                placeholder="Search quote"
                 className="pl-8"
               />
             </div>
