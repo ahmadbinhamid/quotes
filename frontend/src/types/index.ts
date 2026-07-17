@@ -5,7 +5,8 @@ export type QuoteStatus =
   | "accepted"
   | "declined"
   | "expired"
-  | "converted";
+  | "converted"
+  | "superseded";
 
 export interface QuoteItemAddon {
   extension_id: number;
@@ -60,6 +61,9 @@ export interface Quote {
   order_id?: string;
   order_number?: string;
   payment_link_url?: string;
+  // Revision lineage — at most one of these is ever set on a given quote.
+  revises_quote_id?: number | null;
+  superseded_by_quote_id?: number | null;
   created_at: string;
   updated_at: string;
 }

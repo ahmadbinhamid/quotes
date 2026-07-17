@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@flowposltd/ui";
-import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw, RotateCcw, GitBranch } from "lucide-react";
 import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
 import { QuoteDetailSkeleton } from "@/components/quotes/QuoteDetailSkeleton";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
@@ -35,6 +35,7 @@ import {
   convertQuoteToOrder,
   regeneratePaymentLink,
   reopenQuote,
+  reviseQuote,
   type ConvertQuoteInput,
 } from "@/lib/api/quotes";
 import { toast } from "@/lib/toast";
@@ -71,6 +72,16 @@ export default function QuoteDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       toast.success("Link created — share the link with your customer.");
+    },
+  });
+
+  const reviseMutation = useMutation({
+    mutationFn: () => reviseQuote(quoteId),
+    onSuccess: (revision) => {
+      queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      toast.success(`New version ${revision.quote_number} created — review it before sending.`);
+      setReviseDialogOpen(false);
+      navigate(`/quotes/${revision.id}/edit`);
     },
   });
 
@@ -121,6 +132,7 @@ export default function QuoteDetailPage() {
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [reopenExpiresAt, setReopenExpiresAt] = useState(defaultReopenExpiry());
+  const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
 
   async function copyShareLink() {
     if (!quote) return;
@@ -147,9 +159,12 @@ export default function QuoteDetailPage() {
 
   const canEdit = quote.status === "draft";
   const canSend = quote.status === "draft";
-  const canShare = quote.status !== "draft";
+  const canShare = quote.status !== "draft" && quote.status !== "superseded";
   const canConvert = quote.status === "accepted";
   const canReopen = quote.status === "expired";
+  // Once a customer might already be looking at the sent link, edits go
+  // through a revision instead of mutating what they're viewing in place.
+  const canRevise = quote.status === "sent" || quote.status === "viewed";
 
   return (
     <div className="p-6 flex flex-col gap-5 h-full overflow-y-auto">
@@ -189,6 +204,12 @@ export default function QuoteDetailPage() {
             <Button onClick={() => sendMutation.mutate()} loading={sendMutation.isPending}>
               <Send className="size-4" />
               Create shareable link
+            </Button>
+          )}
+          {canRevise && (
+            <Button variant="secondary" onClick={() => setReviseDialogOpen(true)}>
+              <GitBranch className="size-4" />
+              Create New Version
             </Button>
           )}
           {canConvert && (
@@ -276,6 +297,28 @@ export default function QuoteDetailPage() {
           <CardContent className="py-4 text-sm text-content-secondary">
             This quote expired on {formatDate(quote.expires_at)} without a response. Reopen it with a new expiry
             date to pick up where it left off.
+          </CardContent>
+        </Card>
+      )}
+      {quote.status === "superseded" && quote.superseded_by_quote_id && (
+        <Card>
+          <CardContent className="py-4 text-sm text-content-secondary">
+            This quote has been replaced —{" "}
+            <Link to={`/quotes/${quote.superseded_by_quote_id}`} className="text-primary hover:underline">
+              view the new version
+            </Link>
+            . Its share link can no longer be accepted or declined.
+          </CardContent>
+        </Card>
+      )}
+      {quote.revises_quote_id && (
+        <Card>
+          <CardContent className="py-4 text-sm text-content-secondary">
+            This is a new version of{" "}
+            <Link to={`/quotes/${quote.revises_quote_id}`} className="text-primary hover:underline">
+              the original quote
+            </Link>
+            .
           </CardContent>
         </Card>
       )}
@@ -441,6 +484,28 @@ export default function QuoteDetailPage() {
             <Button onClick={() => reopenMutation.mutate()} loading={reopenMutation.isPending}>
               <RotateCcw className="size-4" />
               Reopen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviseDialogOpen} onOpenChange={setReviseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create a new version of this quote?</DialogTitle>
+            <DialogDescription>
+              {quote.quote_number} will be marked as replaced and can no longer be accepted or declined. A new
+              draft quote with the same customer, items and totals will be created for you to edit and send —
+              the changes only apply to the new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setReviseDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => reviseMutation.mutate()} loading={reviseMutation.isPending}>
+              <GitBranch className="size-4" />
+              Create New Version
             </Button>
           </DialogFooter>
         </DialogContent>

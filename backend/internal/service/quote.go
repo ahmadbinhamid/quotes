@@ -250,6 +250,80 @@ func (s *QuoteService) Send(ctx context.Context, tenantID, id uint64) (*models.Q
 	return s.quotes.GetByID(ctx, tenantID, id)
 }
 
+// CreateRevision clones a sent/viewed quote — one a customer may already be
+// looking at, so it can't just be edited in place — into a fresh draft with
+// the same customer, items and totals, and marks the original Superseded.
+// That status change is what actually blocks the original's public link
+// from being accepted/declined afterward (the same check Accept/Decline
+// already do); SupersededByQuoteID only exists so the UI can link to the
+// replacement.
+func (s *QuoteService) CreateRevision(ctx context.Context, tenantID, userID, id uint64) (*models.Quote, error) {
+	q, err := s.quotes.GetByID(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	s.expireIfNeeded(ctx, q)
+	if q.Status != models.QuoteStatusSent && q.Status != models.QuoteStatusViewed {
+		return nil, fmt.Errorf("quote %s: only sent or viewed quotes can be revised: %w", q.QuoteNumber, apperrors.ErrConflict)
+	}
+
+	items := make([]models.QuoteItem, len(q.Items))
+	for i, it := range q.Items {
+		items[i] = models.QuoteItem{
+			VariantID: it.VariantID, Name: it.Name, Description: it.Description,
+			Quantity: it.Quantity, UnitPrice: it.UnitPrice, TaxAmount: it.TaxAmount,
+			Addons: it.Addons, Total: it.Total, SortOrder: it.SortOrder,
+		}
+	}
+
+	number, err := s.quotes.NextQuoteNumber(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	token, err := generateShareToken()
+	if err != nil {
+		return nil, err
+	}
+
+	revision := &models.Quote{
+		TenantID:        tenantID,
+		QuoteNumber:     fmt.Sprintf("Q-%04d", number),
+		ShareToken:      token,
+		Status:          models.QuoteStatusDraft,
+		CustomerID:      q.CustomerID,
+		CustomerName:    q.CustomerName,
+		CustomerEmail:   q.CustomerEmail,
+		CustomerPhone:   q.CustomerPhone,
+		AddressLine1:    q.AddressLine1,
+		AddressLine2:    q.AddressLine2,
+		City:            q.City,
+		State:           q.State,
+		Postcode:        q.Postcode,
+		Country:         q.Country,
+		Items:           items,
+		SubTotal:        q.SubTotal,
+		TotalDiscount:   q.TotalDiscount,
+		TotalTax:        q.TotalTax,
+		ShippingCharges: q.ShippingCharges,
+		Total:           q.Total,
+		Notes:           q.Notes,
+		// A placeholder the staff editor will immediately let them change —
+		// the whole point of a revision is to review/adjust before re-sending.
+		ExpiresAt:       time.Now().AddDate(0, 0, 1),
+		RevisesQuoteID:  &q.ID,
+		CreatedByUserID: userID,
+	}
+	if err := s.quotes.Create(ctx, revision); err != nil {
+		return nil, err
+	}
+
+	fields := map[string]any{"status": models.QuoteStatusSuperseded, "superseded_by_quote_id": revision.ID}
+	if err := s.quotes.UpdateFields(ctx, tenantID, id, fields); err != nil {
+		return nil, err
+	}
+	return revision, nil
+}
+
 // expirable statuses can lapse into Expired once past ExpiresAt — includes
 // Accepted so an accepted-but-not-yet-converted quote can't be converted
 // after its deadline just because nobody happened to view/list it first.

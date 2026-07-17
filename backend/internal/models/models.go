@@ -27,17 +27,19 @@ func (Installation) TableName() string { return "installations" }
 
 // QuoteStatus is the lifecycle state of a Quote. Transitions are one-way
 // (see service.QuoteService): draft -> sent -> viewed -> accepted/declined,
-// accepted -> converted, and sent/viewed -> expired once past ExpiresAt.
+// accepted -> converted, sent/viewed -> expired once past ExpiresAt, and
+// sent/viewed -> superseded if staff clone it into a revision instead.
 type QuoteStatus string
 
 const (
-	QuoteStatusDraft     QuoteStatus = "draft"
-	QuoteStatusSent      QuoteStatus = "sent"
-	QuoteStatusViewed    QuoteStatus = "viewed"
-	QuoteStatusAccepted  QuoteStatus = "accepted"
-	QuoteStatusDeclined  QuoteStatus = "declined"
-	QuoteStatusExpired   QuoteStatus = "expired"
-	QuoteStatusConverted QuoteStatus = "converted"
+	QuoteStatusDraft      QuoteStatus = "draft"
+	QuoteStatusSent       QuoteStatus = "sent"
+	QuoteStatusViewed     QuoteStatus = "viewed"
+	QuoteStatusAccepted   QuoteStatus = "accepted"
+	QuoteStatusDeclined   QuoteStatus = "declined"
+	QuoteStatusExpired    QuoteStatus = "expired"
+	QuoteStatusConverted  QuoteStatus = "converted"
+	QuoteStatusSuperseded QuoteStatus = "superseded"
 )
 
 // Quote is a priced estimate a tenant sends a customer, shareable via a
@@ -97,6 +99,14 @@ type Quote struct {
 	// staff can re-copy/re-send it without hitting FlowPOS again; refreshed
 	// by the payment-link regenerate endpoint.
 	PaymentLinkURL *string `gorm:"type:varchar(1024)" json:"payment_link_url,omitempty"`
+
+	// RevisesQuoteID is set on a revision — the quote it was cloned from.
+	RevisesQuoteID *uint64 `json:"revises_quote_id,omitempty"`
+	// SupersededByQuoteID is set on the original once a revision of it
+	// exists. Its status also moves to Superseded at the same time, which is
+	// what actually blocks further accept/decline — this field only exists
+	// so the UI can link straight to the newer quote.
+	SupersededByQuoteID *uint64 `json:"superseded_by_quote_id,omitempty"`
 
 	CreatedByUserID uint64 `json:"created_by_user_id"`
 

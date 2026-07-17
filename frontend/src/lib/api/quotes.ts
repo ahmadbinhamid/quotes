@@ -50,6 +50,14 @@ export async function reopenQuote(id: number, expiresAt: string): Promise<Quote>
   return data.quote;
 }
 
+// Only valid on a sent/viewed quote — clones it into a new draft (so the
+// customer's already-live link can't be edited underneath them) and marks
+// the original superseded, returning the new draft to continue editing.
+export async function reviseQuote(id: number): Promise<Quote> {
+  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/revise`);
+  return data.quote;
+}
+
 export type FulfillmentType = "collection" | "delivery";
 
 export interface ConvertQuoteInput {

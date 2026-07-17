@@ -16,6 +16,7 @@ const FILTER_OPTIONS: { value: QuotesStatusFilterValue; label: string }[] = [
   { value: "declined", label: QUOTE_STATUS_LABEL.declined },
   { value: "converted", label: QUOTE_STATUS_LABEL.converted },
   { value: "expired", label: QUOTE_STATUS_LABEL.expired },
+  { value: "superseded", label: QUOTE_STATUS_LABEL.superseded },
 ];
 
 interface QuotesStatusFilterProps {

@@ -41,6 +41,9 @@ export default function PublicQuotePage() {
     queryKey: ["public-quote", token],
     queryFn: () => getPublicQuote(token!),
     enabled: Boolean(token),
+    // Staff could revise/reopen/expire this quote while the customer has it
+    // open — refresh on refocus so the page notices without a manual reload.
+    refetchOnWindowFocus: "always",
   });
 
   const acceptMutation = useMutation({
@@ -50,6 +53,10 @@ export default function PublicQuotePage() {
       setDecided(true);
       toast.success("Quote accepted");
     },
+    // The quote's status may have moved on server-side (e.g. superseded)
+    // since this page loaded — refetch so the UI reflects that instead of
+    // just showing an error toast while still offering a dead Accept button.
+    onError: () => queryClient.invalidateQueries({ queryKey: ["public-quote", token] }),
   });
 
   const declineMutation = useMutation({
@@ -59,6 +66,7 @@ export default function PublicQuotePage() {
       setDecided(true);
       toast.success("Quote declined");
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["public-quote", token] }),
   });
 
   if (isLoading) {
@@ -118,6 +126,14 @@ export default function PublicQuotePage() {
         {quote.status === "converted" && (
           <Card className="border-tag-success">
             <CardContent className="py-4 text-sm">This quote has been turned into an order.</CardContent>
+          </Card>
+        )}
+        {quote.status === "superseded" && (
+          <Card>
+            <CardContent className="py-4 text-sm text-content-secondary">
+              This quote has been updated and this link is no longer valid. Please ask your service provider
+              for the new link.
+            </CardContent>
           </Card>
         )}
 

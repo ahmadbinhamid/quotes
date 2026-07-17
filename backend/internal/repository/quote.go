@@ -14,9 +14,10 @@ import (
 // by the implementation.
 type QuoteFilter struct {
 	Status string
-	// ExcludeExpired drops expired quotes from the result — used by the
-	// default ("active") list view, which shows everything except expired
-	// rather than one exact status match. Ignored if Status is also set.
+	// ExcludeExpired drops expired and superseded quotes from the result —
+	// used by the default ("active") list view, which shows everything still
+	// actionable rather than one exact status match. Ignored if Status is
+	// also set.
 	ExcludeExpired bool
 	Search string
 	Limit  int
@@ -83,7 +84,9 @@ func (r *quoteRepository) List(ctx context.Context, tenantID uint64, filter Quot
 	if filter.Status != "" {
 		base = base.Where("status = ?", filter.Status)
 	} else if filter.ExcludeExpired {
-		base = base.Where("status <> ?", models.QuoteStatusExpired)
+		// Superseded quotes are the same kind of dead end as expired ones —
+		// whatever replaced them already shows up in this same active view.
+		base = base.Where("status NOT IN (?, ?)", models.QuoteStatusExpired, models.QuoteStatusSuperseded)
 	}
 	if filter.Search != "" {
 		like := "%" + filter.Search + "%"

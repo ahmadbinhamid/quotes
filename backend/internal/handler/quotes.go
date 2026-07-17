@@ -132,6 +132,20 @@ func (h *QuoteHandler) Reopen(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"quote": q})
 }
 
+func (h *QuoteHandler) Revise(c *gin.Context) {
+	id, ok := quoteIDParam(c)
+	if !ok {
+		return
+	}
+	claims := claimsFrom(c)
+	q, err := h.quotes.CreateRevision(c.Request.Context(), claims.TenantID, claims.UserID, id)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"quote": q})
+}
+
 // convertRequest is the fulfillment info an admin picks right before
 // converting — which FlowPOS location handles the order, and whether the
 // customer collects in-store or it ships to a delivery address.

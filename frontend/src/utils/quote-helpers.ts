@@ -8,11 +8,12 @@ export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
   declined: "Declined",
   expired: "Expired",
   converted: "Order Placed",
+  superseded: "Replaced",
 };
 
 export const QUOTE_STATUS_BADGE_VARIANT: Record<
   QuoteStatus,
-  "secondary" | "outline" | "status-success" | "status-danger" | "status-info" | "status-warning"
+  "secondary" | "outline" | "status-success" | "status-danger" | "status-info" | "status-warning" | "status-neutral"
 > = {
   draft: "secondary", // Neutral, work in progress.
   sent: "status-info", // Informational — the quotation has been sent.
@@ -21,6 +22,7 @@ export const QUOTE_STATUS_BADGE_VARIANT: Record<
   declined: "status-danger", // Negative outcome.
   converted: "status-success", // Final successful business outcome.
   expired: "status-warning",
+  superseded: "status-neutral", // Dead end, but not a failure — a newer revision replaced it.
 };
 export const QUOTE_STATUS_BADGE_CLASSNAME: Partial<Record<QuoteStatus, string>> = {
   accepted: "border-transparent bg-orange-100 !text-orange-700 dark:bg-orange-900/30 dark:!text-orange-400",
