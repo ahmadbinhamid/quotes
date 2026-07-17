@@ -50,12 +50,45 @@ export async function reopenQuote(id: number, expiresAt: string): Promise<Quote>
   return data.quote;
 }
 
-// Only valid on a sent/viewed quote — clones it into a new draft (so the
-// customer's already-live link can't be edited underneath them) and marks
-// the original superseded, returning the new draft to continue editing.
-export async function reviseQuote(id: number): Promise<Quote> {
-  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/revise`);
+// Only valid on a sent/viewed/accepted quote — clones it into a new draft
+// (so the customer's already-live link, or what they already agreed to,
+// can't be edited underneath them) and marks the original superseded,
+// returning the new draft to continue editing. excludeItemIds drops specific
+// lines from the clone — used when a catalog item's variant/add-on is no
+// longer valid in FlowPOS, so the new version doesn't fail the same way.
+export async function reviseQuote(id: number, excludeItemIds?: number[]): Promise<Quote> {
+  const { data } = await apiClient.post<{ quote: Quote }>(`/quotes/${id}/revise`, {
+    exclude_item_ids: excludeItemIds,
+  });
   return data.quote;
+}
+
+export interface ConversionIssue {
+  item_id: number;
+  item_name: string;
+  // "catalog_changed" is a client-side fallback, not something the backend
+  // check returns — used when FlowPOS itself rejects the actual conversion
+  // for a line the pre-check couldn't verify (e.g. an older quote created
+  // before item.product_id was tracked, so there's nothing to re-check
+  // against). See QuoteDetailPage's convertMutation.onError.
+  issue: "variant_not_found" | "product_not_found" | "addon_invalid" | "price_changed" | "catalog_changed";
+  addon_name?: string;
+  old_price?: number;
+  new_price?: number;
+  message?: string;
+}
+
+export interface ConversionCheckResult {
+  ok: boolean;
+  issues: ConversionIssue[];
+}
+
+// Re-validates an accepted quote's catalog lines against FlowPOS's current
+// data — call before opening the convert dialog so a stale variant/add-on
+// surfaces as a clear warning instead of a raw error mid-conversion.
+export async function checkConversionReadiness(id: number): Promise<ConversionCheckResult> {
+  const { data } = await apiClient.get<ConversionCheckResult>(`/quotes/${id}/conversion-check`);
+  return data;
 }
 
 export type FulfillmentType = "collection" | "delivery";

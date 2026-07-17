@@ -17,6 +17,8 @@ export interface QuoteItemAddon {
 
 export interface QuoteItem {
   id?: number;
+  product_id?: number | null;
+  product_slug?: string;
   variant_id?: number | null;
   name: string;
   description?: string;
@@ -25,6 +27,7 @@ export interface QuoteItem {
   // Per-unit VAT breakdown, informational only. Always 0/absent for a
   // custom (non-catalog) line.
   tax_amount?: number;
+  tax_inclusive?: boolean;
   addons?: QuoteItemAddon[];
   total?: number;
   sort_order?: number;
@@ -69,16 +72,22 @@ export interface Quote {
 }
 
 export interface QuoteItemInput {
+  product_id?: number | null;
+  // Preferred over product_id for the conversion-readiness re-check —
+  // FlowPOS's product-lookup route doesn't reliably resolve every product by
+  // its bare numeric id.
+  product_slug?: string;
   variant_id?: number | null;
   name: string;
   description: string;
   quantity: number;
   unit_price: number;
   tax_amount?: number;
-  // Client-side display hint only — never read by the backend. Absent for
-  // items reloaded from an existing quote (not persisted).
+  // Whether tax_amount is folded into unit_price (true) or added on top of a
+  // lower base price (false) — persisted so the backend can reconstruct the
+  // pre-tax price FlowPOS itself quotes (see conversion-readiness check).
   tax_inclusive?: boolean;
-  // Client-side thumbnail only, same non-persisted caveat as tax_inclusive.
+  // Client-side thumbnail only — never read by the backend, not persisted.
   image?: string;
   addons?: QuoteItemAddon[];
 }

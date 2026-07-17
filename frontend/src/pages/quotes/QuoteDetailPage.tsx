@@ -24,11 +24,13 @@ import {
   TableRow,
 } from "@flowposltd/ui";
 import { ArrowLeft, Copy, Pencil, Trash2, Send, CheckCircle2, Link2, RefreshCw, RotateCcw, GitBranch } from "lucide-react";
+import { ConversionIssuesDialog } from "@/components/quotes/ConversionIssuesDialog";
 import { ConvertToOrderPanel } from "@/components/quotes/ConvertToOrderPanel";
 import { QuoteDetailSkeleton } from "@/components/quotes/QuoteDetailSkeleton";
 import { QuoteStatusBadge } from "@/components/quotes/QuoteStatusBadge";
 import { FormField } from "@/components/ui/form-field";
 import {
+  checkConversionReadiness,
   deleteQuote,
   getQuote,
   sendQuote,
@@ -36,6 +38,7 @@ import {
   regeneratePaymentLink,
   reopenQuote,
   reviseQuote,
+  type ConversionIssue,
   type ConvertQuoteInput,
 } from "@/lib/api/quotes";
 import { toast } from "@/lib/toast";
@@ -76,12 +79,25 @@ export default function QuoteDetailPage() {
   });
 
   const reviseMutation = useMutation({
-    mutationFn: () => reviseQuote(quoteId),
+    mutationFn: (excludeItemIds?: number[]) => reviseQuote(quoteId, excludeItemIds),
     onSuccess: (revision) => {
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       toast.success(`New version ${revision.quote_number} created — review it before sending.`);
       setReviseDialogOpen(false);
+      setConversionIssuesOpen(false);
       navigate(`/quotes/${revision.id}/edit`);
+    },
+  });
+
+  const checkConversionMutation = useMutation({
+    mutationFn: () => checkConversionReadiness(quoteId),
+    onSuccess: (result) => {
+      if (result.ok) {
+        setConvertDialogOpen(true);
+      } else {
+        setConversionIssues(result.issues);
+        setConversionIssuesOpen(true);
+      }
     },
   });
 
@@ -91,6 +107,21 @@ export default function QuoteDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["quotes"] });
       toast.success(updated.order_number ? `Order ${updated.order_number} created` : "Order created");
       setConvertDialogOpen(false);
+    },
+    // The pre-check above can only re-verify items that have a product_id
+    // stored (quotes created since that field existed) — for anything it
+    // couldn't check, this is the real safety net: recognize FlowPOS's own
+    // "catalog changed" wording and show the same graceful dialog instead of
+    // a bare error toast, even though we can't tell it which item to blame.
+    onError: (err: Error) => {
+      const isCatalogChange = /variant.{0,20}not found|not related to the variant/i.test(err.message);
+      if (isCatalogChange) {
+        setConvertDialogOpen(false);
+        setConversionIssues([{ item_id: -1, item_name: "This quote", issue: "catalog_changed", message: err.message }]);
+        setConversionIssuesOpen(true);
+      } else {
+        toast.error(err.message);
+      }
     },
   });
 
@@ -133,6 +164,8 @@ export default function QuoteDetailPage() {
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [reopenExpiresAt, setReopenExpiresAt] = useState(defaultReopenExpiry());
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
+  const [conversionIssuesOpen, setConversionIssuesOpen] = useState(false);
+  const [conversionIssues, setConversionIssues] = useState<ConversionIssue[]>([]);
 
   async function copyShareLink() {
     if (!quote) return;
@@ -213,7 +246,7 @@ export default function QuoteDetailPage() {
             </Button>
           )}
           {canConvert && (
-            <Button onClick={() => setConvertDialogOpen(true)}>
+            <Button onClick={() => checkConversionMutation.mutate()} loading={checkConversionMutation.isPending}>
               <CheckCircle2 className="size-4" />
               Convert to order
             </Button>
@@ -503,13 +536,34 @@ export default function QuoteDetailPage() {
             <Button variant="secondary" onClick={() => setReviseDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => reviseMutation.mutate()} loading={reviseMutation.isPending}>
+            <Button onClick={() => reviseMutation.mutate(undefined)} loading={reviseMutation.isPending}>
               <GitBranch className="size-4" />
               Create New Version
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConversionIssuesDialog
+        open={conversionIssuesOpen}
+        onOpenChange={setConversionIssuesOpen}
+        issues={conversionIssues}
+        totalItemCount={quote.items.length}
+        submitting={reviseMutation.isPending}
+        onCreateNewVersion={() => {
+          // item_id -1 means "we know something's wrong but not which line"
+          // (the reactive fallback) — nothing to exclude by id in that case,
+          // clone everything and let the admin fix it in the editor. Every
+          // other issue (including price_changed) drops that item rather
+          // than carrying a stale price/variant/add-on into the new version.
+          const canPinpoint = conversionIssues.every((issue) => issue.item_id !== -1);
+          reviseMutation.mutate(canPinpoint ? [...new Set(conversionIssues.map((issue) => issue.item_id))] : undefined);
+        }}
+        onCreateFreshQuote={() => {
+          setConversionIssuesOpen(false);
+          navigate("/quotes/new");
+        }}
+      />
     </div>
   );
 }

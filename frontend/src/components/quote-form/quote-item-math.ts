@@ -7,6 +7,8 @@ export function emptyItem(): QuoteItemInput {
 
 export function itemFromProduct(product: PickedProduct): QuoteItemInput {
   return {
+    product_id: product.productId,
+    product_slug: product.productSlug,
     variant_id: product.variantId,
     name: product.name,
     description: "",

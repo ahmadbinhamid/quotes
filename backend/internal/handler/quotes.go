@@ -137,13 +137,32 @@ func (h *QuoteHandler) Revise(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var in struct {
+		ExcludeItemIDs []uint64 `json:"exclude_item_ids"`
+	}
+	// Body is optional — a plain "create a new version" call from the detail
+	// page sends none.
+	_ = c.ShouldBindJSON(&in)
 	claims := claimsFrom(c)
-	q, err := h.quotes.CreateRevision(c.Request.Context(), claims.TenantID, claims.UserID, id)
+	q, err := h.quotes.CreateRevision(c.Request.Context(), claims.TenantID, claims.UserID, id, in.ExcludeItemIDs)
 	if err != nil {
 		fail(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"quote": q})
+}
+
+func (h *QuoteHandler) ConversionCheck(c *gin.Context) {
+	id, ok := quoteIDParam(c)
+	if !ok {
+		return
+	}
+	result, err := h.quotes.CheckConversionReadiness(c.Request.Context(), tenantID(c), id)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
 // convertRequest is the fulfillment info an admin picks right before

@@ -41,13 +41,30 @@ export interface CatalogAddonGroup {
   addons: CatalogAddon[];
 }
 
+// A variant has no flat "name" — confirmed against a real response. Its
+// display name is built from `items`, one per choice dimension (e.g. a Size
+// of "S" and a Color of "Red" would be two entries here).
+export interface CatalogVariantItem {
+  id: number;
+  name: string;
+  choice_type?: { id: number; label: string };
+}
+
 export interface CatalogVariant {
   id: number;
-  name?: string;
   price: number;
   sku?: string;
+  items?: CatalogVariantItem[];
   add_on_groups?: CatalogAddonGroup[];
   [key: string]: unknown;
+}
+
+// Joins every choice dimension into one label ("S", or "S • Red" for a
+// product with more than one choice type) — same separator convention
+// tenant-dashboard's own order flow uses for multi-dimension variants.
+export function variantLabel(variant: CatalogVariant): string {
+  const names = (variant.items ?? []).map((item) => item.name).filter(Boolean);
+  return names.length > 0 ? names.join(" • ") : `Variant #${variant.id}`;
 }
 
 // GET /catalog/products/:slug — a simple product resolves default_variant

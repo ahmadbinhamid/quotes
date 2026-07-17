@@ -19,9 +19,9 @@ type QuoteFilter struct {
 	// actionable rather than one exact status match. Ignored if Status is
 	// also set.
 	ExcludeExpired bool
-	Search string
-	Limit  int
-	Offset int
+	Search         string
+	Limit          int
+	Offset         int
 }
 
 type QuoteRepository interface {
@@ -33,6 +33,11 @@ type QuoteRepository interface {
 	List(ctx context.Context, tenantID uint64, filter QuoteFilter) ([]models.Quote, int64, error)
 	// UpdateFields is tenant-scoped, for staff-initiated changes.
 	UpdateFields(ctx context.Context, tenantID, id uint64, fields map[string]any) error
+	// TryTransitionStatus atomically moves a quote from `from` to `to`,
+	// succeeding only if its status still matches `from` at the moment of the
+	// write — the guard against two concurrent callers (e.g. two convert
+	// clicks) both thinking they're the one making the transition.
+	TryTransitionStatus(ctx context.Context, tenantID, id uint64, from, to models.QuoteStatus) (bool, error)
 	// UpdateStatusFields is not tenant-scoped, for lifecycle transitions
 	// reached via the public share-token endpoints (view/accept/decline),
 	// where the caller has already resolved the quote by token.
@@ -130,6 +135,16 @@ func (r *quoteRepository) UpdateFields(ctx context.Context, tenantID, id uint64,
 		return fmt.Errorf("quote %d: %w", id, apperrors.ErrNotFound)
 	}
 	return nil
+}
+
+func (r *quoteRepository) TryTransitionStatus(ctx context.Context, tenantID, id uint64, from, to models.QuoteStatus) (bool, error) {
+	res := r.db.WithContext(ctx).Model(&models.Quote{}).
+		Where("tenant_id = ? AND id = ? AND status = ?", tenantID, id, from).
+		Update("status", to)
+	if res.Error != nil {
+		return false, translate(res.Error, fmt.Sprintf("quote %d", id))
+	}
+	return res.RowsAffected > 0, nil
 }
 
 func (r *quoteRepository) UpdateStatusFields(ctx context.Context, id uint64, fields map[string]any) error {

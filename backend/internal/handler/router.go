@@ -62,6 +62,7 @@ func NewRouter(installations *service.InstallationService, quotes *service.Quote
 	q.POST("/:id/send", quoteHandler.Send)
 	q.POST("/:id/reopen", quoteHandler.Reopen)
 	q.POST("/:id/revise", quoteHandler.Revise)
+	q.GET("/:id/conversion-check", quoteHandler.ConversionCheck)
 	q.POST("/:id/convert", quoteHandler.Convert)
 	q.POST("/:id/payment-link", quoteHandler.RegeneratePaymentLink)
 

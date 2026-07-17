@@ -71,12 +71,15 @@ export default function QuoteFormPage() {
     setCountry(existing.country);
     setItems(
       existing.items.map((item) => ({
+        product_id: item.product_id,
+        product_slug: item.product_slug,
         variant_id: item.variant_id,
         name: item.name,
         description: item.description ?? "",
         quantity: item.quantity,
         unit_price: item.unit_price,
         tax_amount: item.tax_amount,
+        tax_inclusive: item.tax_inclusive,
         addons: item.addons,
       }))
     );
@@ -159,12 +162,15 @@ export default function QuoteFormPage() {
       items: items
         .filter((item) => item.name?.trim().length > 0)
         .map((item) => ({
+          product_id: item.product_id,
+          product_slug: item.product_slug,
           variant_id: item.variant_id,
           name: item.name,
           description: item.description,
           quantity: Number(item.quantity) || 0,
           unit_price: Number(item.unit_price) || 0,
           tax_amount: item.tax_amount,
+          tax_inclusive: item.tax_inclusive,
           addons: item.addons,
         })),
       total_discount: discount,

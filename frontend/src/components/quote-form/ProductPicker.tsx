@@ -6,6 +6,7 @@ import {
   getProduct,
   listProducts,
   productImageUrl,
+  variantLabel,
   type CatalogAddonGroup,
   type CatalogProduct,
   type CatalogProductDetail,
@@ -23,6 +24,8 @@ export interface PickedAddon {
 }
 
 export interface PickedProduct {
+  productId?: number;
+  productSlug?: string;
   variantId?: number;
   name: string;
   unitPrice: number;
@@ -78,8 +81,10 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
       if (variants.length <= 1 && groups.length === 0) {
         const tax = computeItemTax(defaultVariant?.price ?? detail.price, detail.vat_rate, detail.is_taxable, detail.is_vat_inclusive);
         onAdd({
+          productId: detail.id,
+          productSlug: detail.slug,
           variantId: defaultVariant?.id,
-          name: defaultVariant?.name ? `${detail.name} - ${defaultVariant.name}` : detail.name,
+          name: defaultVariant?.items?.length ? `${detail.name} - ${variantLabel(defaultVariant)}` : detail.name,
           unitPrice: tax.unitPrice,
           quantity: 1,
           taxPerUnit: tax.taxPerUnit > 0 ? tax.taxPerUnit : undefined,
@@ -142,8 +147,10 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
       .filter((a) => stage.selectedAddonIds.has(a.id))
       .map((a) => ({ extensionId: a.id, name: a.name, price: a.price, quantity: 1 }));
     onAdd({
+      productId: stage.detail.id,
+      productSlug: stage.detail.slug,
       variantId: activeVariant?.id,
-      name: activeVariant?.name ? `${stage.detail.name} - ${activeVariant.name}` : stage.detail.name,
+      name: activeVariant?.items?.length ? `${stage.detail.name} - ${variantLabel(activeVariant)}` : stage.detail.name,
       unitPrice: tax.unitPrice,
       quantity: stage.qty,
       taxPerUnit: tax.taxPerUnit > 0 ? tax.taxPerUnit : undefined,
@@ -250,7 +257,7 @@ export function ProductPicker({ onAdd }: ProductPickerProps) {
                                 : "border-border text-content-secondary hover:border-primary/50"
                             )}
                           >
-                            {variant.name ?? `Variant #${variant.id}`}
+                            {variantLabel(variant)}
                           </button>
                         ))}
                       </div>
