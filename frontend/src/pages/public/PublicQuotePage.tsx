@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@flowposltd/ui";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Download, XCircle } from "lucide-react";
 import { acceptPublicQuote, declinePublicQuote, getPublicQuote } from "@/lib/api/public-quotes";
 import { toast } from "@/lib/toast";
 import {
@@ -92,16 +92,22 @@ export default function PublicQuotePage() {
   const canRespond = quote.status === "sent" || quote.status === "viewed";
 
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-secondary/30 p-6 flex justify-center">
+    <div className="print-area fixed inset-0 overflow-y-auto bg-secondary/30 p-6 flex justify-center">
       <div className="w-full max-w-2xl flex flex-col gap-5 py-8">
         <div className="flex items-center justify-between">
           <div>
             <h1>Quote {quote.quote_number}</h1>
             <p className="lead mt-0.5">From your service provider</p>
           </div>
-          <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]} className={QUOTE_STATUS_BADGE_CLASSNAME[quote.status]}>
-            {QUOTE_STATUS_LABEL[quote.status]}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={QUOTE_STATUS_BADGE_VARIANT[quote.status]} className={QUOTE_STATUS_BADGE_CLASSNAME[quote.status]}>
+              {QUOTE_STATUS_LABEL[quote.status]}
+            </Badge>
+            <Button variant="secondary" size="sm" className="no-print" onClick={() => window.print()}>
+              <Download className="size-4" />
+              Download PDF
+            </Button>
+          </div>
         </div>
 
         {quote.status === "accepted" && (
@@ -206,7 +212,7 @@ export default function PublicQuotePage() {
         )}
 
         {canRespond && !decided && (
-          <div className="flex justify-end gap-2 flex-wrap">
+          <div className="no-print flex justify-end gap-2 flex-wrap">
             <p className="caption self-center mr-auto">Valid until {formatDate(quote.expires_at)}</p>
             <Button variant="secondary" onClick={() => declineMutation.mutate()} loading={declineMutation.isPending}>
               <XCircle className="size-4" />
