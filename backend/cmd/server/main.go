@@ -40,10 +40,11 @@ func main() {
 
 	// JWT auth: the main FlowPOS system signs tokens with JWT_SECRET; this
 	// microservice validates them (claims: tenant_id, user_id, user_email).
+	// Required — an insecure fallback here would let anyone holding a public
+	// copy of this repo's old default forge a valid tenant session.
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "dev-insecure-secret-change-me"
-		log.Printf("WARNING: JWT_SECRET not set — using an insecure dev secret")
+		log.Fatal("JWT_SECRET is required, e.g. a long random string shared with the signing FlowPOS instance")
 	}
 	// Dev token minting is off unless explicitly enabled (never enable in prod).
 	allowDevTokens := os.Getenv("JWT_DEV_TOKENS") == "true"
@@ -52,8 +53,7 @@ func main() {
 	// calls to this app (configured alongside this app's marketplace listing).
 	signingSecret := os.Getenv("FLOWPOS_SIGNING_SECRET")
 	if signingSecret == "" {
-		signingSecret = "dev-insecure-signing-secret-change-me"
-		log.Printf("WARNING: FLOWPOS_SIGNING_SECRET not set — using an insecure dev secret")
+		log.Fatal("FLOWPOS_SIGNING_SECRET is required, matching the secret set on this app's FlowPOS marketplace listing")
 	}
 
 	router := handler.NewRouter(installationService, quoteService, catalogService, jwtSecret, allowDevTokens, signingSecret)

@@ -2,10 +2,10 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
       MYSQL_DATABASE: quotes
       MYSQL_USER: quotes
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env (copy .env.example)}
     ports:
       # Host port for optional external DB access (the app + phpMyAdmin use the
       # internal Docker network). Default 3308 avoids clashing with the
@@ -15,7 +15,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -23,19 +23,19 @@ services:
   backend:
     build: ./backend
     environment:
-      DATABASE_URL: mysql://quotes:${MYSQL_PASSWORD:-secret}@tcp(mysql:3306)/quotes
+      DATABASE_URL: mysql://quotes:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env (copy .env.example)}@tcp(mysql:3306)/quotes
       # FlowPOS API this app calls on the tenant's behalf.
       FLOWPOS_API_URL: ${FLOWPOS_API_URL:-https://api.flowpos.dev/v1}
       # JWT auth: the main FlowPOS system signs the per-app session token with
       # this shared secret; this service validates it (claims: tenant_id,
       # user_id, user_email). Must equal FLOWPOS_SIGNING_SECRET below.
-      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (copy .env.example)}
       # Dev token minting endpoint (POST /api/v1/dev/token). Off by default —
       # never enable in prod.
       JWT_DEV_TOKENS: ${JWT_DEV_TOKENS:-false}
       # Signing secret FlowPOS uses to sign /install, /uninstall and /webhooks
       # calls to this app (set on this app's FlowPOS marketplace listing).
-      FLOWPOS_SIGNING_SECRET: ${FLOWPOS_SIGNING_SECRET:-dev-insecure-signing-secret-change-me}
+      FLOWPOS_SIGNING_SECRET: ${FLOWPOS_SIGNING_SECRET:?Set FLOWPOS_SIGNING_SECRET in .env (copy .env.example)}
     ports:
       # Host port 8082 (not 8080) so this stack can run alongside the
       # ai-builder backend (which maps 8080:8080) without a port clash.
@@ -68,7 +68,7 @@ services:
       - backend
 
   # Web UI for browsing the MySQL database at http://localhost:8083
-  # (server: mysql, user: root, password: ${MYSQL_ROOT_PASSWORD:-root}).
+  # (server: mysql, user: root, password: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}).
   phpmyadmin:
     image: phpmyadmin:5
     environment:
